@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel v4.56 — G22 convergence complete, spring dispatch infrastructure, deep debt audit CLEAN, 27 domains, 320+ translations, 27 signal graphs, zero blocking debt, SPRINGS-READY"
-date = 2026-08-03
+description = "Orchestration kernel v4.57 — G22 complete, cell attach CLI, 30 signal graphs, 27 domains, 320+ translations, zero blocking debt, ironGate Phase 1 OPERATIONALLY READY"
+date = 2026-08-04
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]
@@ -9,9 +9,10 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 ## Status
 
-- **8,570+ tests** workspace-wide, 0 failures, fully concurrent
+- **8,578+ tests** workspace-wide, 0 failures, fully concurrent
 - **88%+ coverage** line / region / function (llvm-cov workspace-wide)
-- **v4.56** — Wave 155n: G22 COMPLETE, spring dispatch, deep debt audit CLEAN
+- **v4.57** — Wave 156d: Cell attach CLI (`biomeos nucleus attach`), ironGate ops gap CLOSED
+- **v4.56** — Wave 155n/156b: G22 COMPLETE, cell deploy graphs, data federation signals
 - **v4.55** — Wave 155n: Coevolution contract (composition.test_swap), mode gap fix
 - **v4.54** — Wave 155m: P1 fixes (respawn storm, socket deletion), P3 sweep
 - **v4.49** — Wave 155k: P2 divergence fixes — capability wipe cycle, test extraction, dep narrowing
@@ -21,8 +22,8 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 - **v4.45** — Wave 155i: Composition Broker E2E + deep debt audit clean
 - **v4.44** — Wave 155i: riboCipher framing + BTSP session propagation in signal graph executor
 - **27 capability domains**, **320+ translations** across 13 primals
-- **27 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
-- **43 deploy graphs** (incl. membrane_deploy, provenance trio, 2 pipeline coordination)
+- **30 atomic signal graphs** across 5 tiers (tower, node, nest, meta, braid)
+- **45 deploy graphs** (incl. membrane_deploy, provenance trio, 2 cell attachment)
 - **20 niche templates** (+ RootPulse, soil-microbiome, ecology)
 - **26 workspace crates**
 - **Zero blocking debt** — 0 unsafe, 0 C deps, 0 TODO/FIXME, 0 clippy warnings
@@ -44,13 +45,13 @@ itself; it coordinates the primals that do.
 - **Dark Forest** — zero metadata leakage, encrypted beacons, genetic model
 - **RootPulse** — emergent provenance pattern (rhizoCrypt + loamSpine + sweetGrass)
 
-## Signal Dispatch (5 tiers, 27 graphs)
+## Signal Dispatch (5 tiers, 30 graphs)
 
 | Tier | Signals | Purpose |
 |------|---------|---------|
 | tower | publish, authenticate, discover, health, bootstrap, enroll, key_rotate, mesh_status | Security + mesh orchestration |
 | node | compute, discover_hardware, dispatch | Compute-level dispatch |
-| nest | store, commit, retrieve, sync, verify, federate, ingest_spore, ingest_dataset | Storage + content + cross-spring exchange |
+| nest | store, commit, retrieve, sync, verify, federate, ingest_spore, ingest_dataset, declare_dataset, acquire_file, complete_dataset | Storage + content + data federation |
 | braid | partial_update, complete | Provenance braid lifecycle |
 | meta | observe, intent, render, health, deploy | Observability + composition |
 
@@ -82,6 +83,10 @@ itself; it coordinates the primals that do.
 
 | Version | Date | Highlight |
 |---------|------|-----------|
+| v4.57 | Aug 4 | Cell attach CLI (`biomeos nucleus attach`), ironGate Phase 1 operationally ready |
+| v4.56 | Aug 3 | G22 COMPLETE, cell deploy graphs, data federation signals, 47 dead deps removed |
+| v4.55 | Jul 31 | Coevolution contract (composition.test_swap), btsp_optional mode gap |
+| v4.54 | Jul 31 | P1 fixes: respawn storm, socket deletion, zombie reaping |
 | v4.49 | Jul 30 | P2 fixes: capability wipe cycle 3-strike, 8-file test extraction, dep narrowing |
 | v4.48 | Jul 30 | Composition lifecycle: cellMembrane boot_order, shutdown ordering |
 | v4.47 | Jul 29 | Deep debt: dead deps, test extraction, capability-based BTSP |

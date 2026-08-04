@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: August 3, 2026
-**Status**: Production Ready (v4.56) — 8,570+ tests / 88.37% line coverage, zero clippy/deny warnings, zero production unwraps, zero dead deps, zero files >800 LOC, all 26 crates `#![forbid(unsafe_code)]`, Edition 2024, rust-version 1.87, cross-arch, 0 C deps, scyBorg (AGPL-3.0-or-later), G22 COMPLETE, springs-ready
+**Last Updated**: August 4, 2026
+**Status**: Production Ready (v4.57) — 8,578+ tests / 88.37% line coverage, zero clippy/deny warnings, zero production unwraps, zero dead deps, zero files >800 LOC, all 26 crates `#![forbid(unsafe_code)]`, Edition 2024, rust-version 1.87, cross-arch, 0 C deps, scyBorg (AGPL-3.0-or-later), G22 COMPLETE, springs-ready, cell attach CLI
 
 ---
 
@@ -110,7 +110,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Edition 2024, modern patterns (LazyLock, let-chains, native async traits path)
 6. **Zero warnings**: Clippy pedantic+nursery clean, full doc coverage, 0 production files >800 lines, 0 test files >450 lines
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 8,570+ tests (0 failures), 88%+ line / function (llvm-cov), fully concurrent suite
+8. **Tested**: 8,578+ tests (0 failures), 88%+ line / function (llvm-cov), fully concurrent suite
 9. **Concurrent**: All non-chaos tests run in parallel — dependency injection, `tokio::time::pause()`, and `ReadySender`/`ReadyReceiver` eliminate global state races and sleep-before-connect patterns (zero production/test sleeps for timing hacks)
 
 ---
@@ -169,9 +169,9 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v4.56)
+**Status**: Production Ready (v4.57)
 **Discovery**: Capability-first runtime registry + bootstrap hints per `CAPABILITY_BASED_DISCOVERY_STANDARD` v1.2.0 + `primal.announce` self-registration — no identity-based routing
 **Neural API**: 320+ semantic translations, 27 capability domains, L4 weighted routing, L5 perceptron shadow mode, stale registration pruning, partition-aware routing, composition hot-reload, cross-gate routing via mesh relay, adaptive weights (redb-persistent), `executor.list`/`executor.status`, `cleanup.sockets`
 **IPC**: `biomeos-core::ipc` transport layer — Unix/abstract/TCP + UDS dual-protocol auto-detect + BTSP + `--bind-mode` guideStone startup (Phase 2 complete, 12/14 primals; HTTP transport removed v3.97; `--tcp-only` deprecated v3.94)
-**Tests**: 8,570+ workspace-wide (0 failures) | **Clippy**: PASS (0 warnings incl tests, pedantic+nursery, `-D warnings`) | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **Production unwraps**: 0 (`unwrap_used = "deny"`) | **Dead deps**: 0 | **Production files >800L**: 0 | **Test files >450L**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded primal names**: 0 in production | **Cross-arch**: x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu
-**Updated**: July 21, 2026
+**Tests**: 8,578+ workspace-wide (0 failures) | **Clippy**: PASS (0 warnings incl tests, pedantic+nursery, `-D warnings`) | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **Production unwraps**: 0 (`unwrap_used = "deny"`) | **Dead deps**: 0 | **Production files >800L**: 0 | **Test files >450L**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Hardcoded primal names**: 0 in production | **Cross-arch**: x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu
+**Updated**: August 4, 2026

@@ -1,6 +1,6 @@
 # Context — biomeOS
 
-**Version**: v4.56 | **Updated**: August 3, 2026
+**Version**: v4.57 | **Updated**: August 4, 2026
 
 ## What This Is
 
@@ -25,7 +25,7 @@ multiple gates (devices).
 - **Architecture:** Single binary (UniBin) with multiple operational modes (bootstrap, nucleus, deploy, doctor, continuous, rootpulse)
 - **Communication:** JSON-RPC 2.0 over `biomeos-core::ipc` transport (`TransportStream`, `TransportListener`, `connect_transport`) — Unix sockets primary, abstract sockets, TCP fallback (Windows via `.port` file); tarpc binary protocol escalation for hot paths (HTTP transport endpoint removed v3.97; inter-gate HTTP via Songbird gateway)
 - **License:** AGPL-3.0-or-later (scyBorg triple-copyleft: AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
-- **Tests:** 8,570+ workspace-wide (0 failures)
+- **Tests:** 8,578+ workspace-wide (0 failures)
 - **Coverage:** 88%+ line coverage (llvm-cov verified)
 - **Blocking debt:** 0 (primalSpring Phase 43 gaps resolved, all composition gaps resolved)
 - **Edition:** Rust 2024 across all workspace crates

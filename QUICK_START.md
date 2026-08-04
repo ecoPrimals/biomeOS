@@ -178,8 +178,8 @@ for diagnostics.
 
 ---
 
-**Status**: Production Ready (v4.56)
-**Updated**: July 26, 2026
-**Tests**: 8,570+ passing (0 failures, fully concurrent), 88.37% line / 89.58% function (llvm-cov) | **Clippy**: PASS (0 warnings incl tests, pedantic+nursery, `-D warnings`) | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **Dead deps**: 0 | **Production files >800L**: 0 | **Test files >450L**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Transport**: Phase 2 complete | **BTSP**: fully compliant
+**Status**: Production Ready (v4.57)
+**Updated**: August 4, 2026
+**Tests**: 8,578+ passing (0 failures, fully concurrent), 88.37% line / 89.58% function (llvm-cov) | **Clippy**: PASS (0 warnings incl tests, pedantic+nursery, `-D warnings`) | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **Dead deps**: 0 | **Production files >800L**: 0 | **Test files >450L**: 0 | **TODO/FIXME**: 0 | **Blocking debt**: 0 | **Transport**: Phase 2 complete | **BTSP**: fully compliant
 
 **Note**: `biomeos monitor dashboard` now redirects to petalTongue (TUI deprecated).

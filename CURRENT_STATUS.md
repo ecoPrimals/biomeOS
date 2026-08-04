@@ -90,6 +90,7 @@
 | **G22 Step 2: Socket namespace unified (membrane/)** | v4.56 | `bd33e17d` |
 | **G22 Steps 3-5: All modes unified, neural-api deprecated** | v4.56 | `b82f0925` |
 | Dep pruning round 3+4 (13 more dead deps, 47 total) | v4.56 | `4b48b83b`+`6a698078` |
+| **Cell attach CLI (`biomeos nucleus attach`)** | v4.57 | `9fcca6b8` |
 
 ---
 

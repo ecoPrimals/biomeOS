@@ -16,7 +16,7 @@
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
 | Deployment graphs (43 incl. provenance trio + membrane) | [graphs/README.md](graphs/README.md) |
-| See evolution handoffs (v2.43–v4.56) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
+| See evolution handoffs (v2.43–v4.57) | [wateringHole/handoffs/](../../infra/wateringHole/handoffs/) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -203,7 +203,7 @@ Key transport module: `biomeos-core::ipc` — `TransportStream`, `TransportListe
 # Build
 cargo build --workspace
 
-# Test (8,570+ tests — fully concurrent)
+# Test (8,578+ tests — fully concurrent)
 cargo test --workspace
 
 # Coverage (90%+ line / function / region, llvm-cov verified)
@@ -228,8 +228,8 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of August 3, 2026 (v4.56)**
-**Active: 29 specs (47 archived), handoffs in wateringHole (v2.43–v4.56), 4 scripts**
+**Documentation current as of August 4, 2026 (v4.57)**
+**Active: 29 specs (47 archived), handoffs in wateringHole (v2.43–v4.57), 4 scripts**
 **Deploy graphs: 43 (incl. provenance trio + membrane_deploy)**
 **Architecture: biomeos-core::ipc transport (Phase 2 complete, 12/14 primals), capability-first runtime registry + bootstrap hints, NucleusMode manifest profiles (`resolve_launch_set()`), L4 weighted routing, L5 perceptron shadow, guideStone startup, HEALTH-01, stale registration pruning, partition-aware routing, lineage fail-closed, real system metrics, agnostic naming, composition hot-reload, HTTP transport removed v3.97**
-**Tests: 8,570+ workspace-wide (0 failures) | Clippy: PASS (0 warnings incl tests) | C deps: 0 | Unsafe: 0 (all 26 crates #![forbid(unsafe_code)]) | Dead deps: 0 | Production files >800L: 0 | Test files >450L: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Cross-arch: x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu**
+**Tests: 8,578+ workspace-wide (0 failures) | Clippy: PASS (0 warnings incl tests) | C deps: 0 | Unsafe: 0 (all 26 crates #![forbid(unsafe_code)]) | Dead deps: 0 | Production files >800L: 0 | Test files >450L: 0 | TODO/FIXME: 0 | Blocking debt: 0 | Hardcoded primal names: 0 | Cross-arch: x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu**
