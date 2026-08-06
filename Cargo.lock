@@ -840,6 +840,7 @@ dependencies = [
  "biomeos-core",
  "biomeos-genomebin-v3",
  "biomeos-graph",
+ "biomeos-primal-sdk",
  "biomeos-pseudospore",
  "biomeos-spore",
  "biomeos-test-utils",

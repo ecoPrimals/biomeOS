@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
 **Updated**: August 4, 2026
-**Version**: v4.57 (Wave 156h — Cephalization Era)
-**Posture**: CEPHALIZATION ERA — ZERO P0/P1/P2. G64 tarpc-wired. ironGate Phase 1 OPERATIONALLY READY.
+**Version**: v4.57 (Wave 156j — Cephalization Advancing)
+**Posture**: CEPHALIZATION ERA — ZERO P0/P1/P2. G64 C2 dual-socket DONE. ironGate Phase 1 OPERATIONALLY READY.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -109,16 +109,16 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 biomeOS is in the **CEPHALIZATION ERA** (G64). G22 COMPLETE. ironGate Phase 1 OPERATIONALLY READY.
 
-**G64 Cephalization — biomeOS Role (Wave 156h)**:
-- **Status**: tarpc-wired (6/15 primals in this tier)
-- tarpc 0.37 (target version) in workspace
-- Dual-socket pattern implemented: `.sock` (JSON-RPC) + `.tarpc.sock` (binary)
+**G64 Cephalization — biomeOS C2 Dual-Socket DONE (Wave 156j)**:
+- **Status**: tarpc-default + dual-socket (7/15 primals now in this tier)
+- biomeOS now serves `.tarpc.sock` sidecar alongside JSON-RPC socket
+- `DefaultHealthService` responds to `health_check`, `health_metrics`, `version` via tarpc binary framing
 - Neural API router auto-escalates to tarpc when `.tarpc.sock` sibling exists
 - `ProtocolPreference` env-configurable (Auto/PreferTarpc/PreferJsonRpc/TarpcOnly/JsonRpcOnly)
 - SDK helpers for primals: `biomeos_primal_sdk::tarpc_transport::{serve_tarpc_health, tarpc_socket_path}`
 - Service definitions: `HealthRpc`, `DiscoveryRpc`, `SecurityRpc` traits in `biomeos-types`
-- Forwarding: health, discovery, security methods forwarded via tarpc binary framing
-- Next: biomeOS serves own `.tarpc.sock` for composition hot paths (Phase 2, after vanguard primals)
+- Both `run()` (standalone) and `run_with_lifecycle()` (NUCLEUS) spawn tarpc sidecar
+- C1 blocker RESOLVED: all 15 primals on tarpc 0.37 (version split eliminated)
 
 **Cell Attach CLI (Aug 4 — Wave 155v/156d)**:
 - `biomeos nucleus attach <cell_graph.toml>` — closes the ops gap for live cell boot

@@ -61,6 +61,23 @@ pub(crate) fn resolve_socket_path(socket: Option<PathBuf>, family_id: &str) -> P
     })
 }
 
+/// Spawn a tarpc `HealthRpc` sidecar alongside the Neural API's JSON-RPC socket.
+///
+/// Creates a `.tarpc.sock` sibling that serves binary-framed health/metrics/version
+/// using the `DefaultHealthService` from the SDK. This enables the G64 cephalization
+/// dual-socket pattern: other primals can call biomeOS via tarpc for sub-ms health checks.
+fn spawn_tarpc_sidecar(jsonrpc_socket: &std::path::Path) {
+    let socket = jsonrpc_socket.to_owned();
+    tokio::spawn(async move {
+        let service = biomeos_primal_sdk::tarpc_transport::DefaultHealthService::new("biomeos");
+        if let Err(e) =
+            biomeos_primal_sdk::tarpc_transport::start_tarpc_sidecar(&socket, service).await
+        {
+            tracing::warn!(error = %e, "tarpc sidecar exited (non-fatal)");
+        }
+    });
+}
+
 pub async fn run(
     graphs_dir: PathBuf,
     family_id: String,
@@ -99,8 +116,13 @@ pub async fn run(
     if btsp_optional {
         info!("  BTSP: optional (unauthenticated JSON-RPC accepted)");
     }
-    info!("  Protocols: JSON-RPC + HTTP/WebSocket (G22 unified)");
+    info!("  Protocols: JSON-RPC + HTTP/WebSocket + tarpc (G22+G64 unified)");
     info!("");
+
+    // G64 Cephalization: Launch tarpc sidecar (.tarpc.sock) for binary-framed health
+    let tarpc_socket = biomeos_primal_sdk::tarpc_transport::tarpc_socket_path(&socket_path);
+    info!("  tarpc Socket: {}", tarpc_socket.display());
+    spawn_tarpc_sidecar(&socket_path);
 
     // G22: Launch HTTP API server alongside Neural API (single process, dual protocol)
     let http_socket = socket_path
@@ -192,7 +214,15 @@ pub async fn run_with_lifecycle(
     if let Some(ref addr) = bind {
         info!("  Bind Address: {addr}");
     }
+    info!("  Protocols: JSON-RPC + tarpc (G64 cephalization)");
     info!("");
+
+    // G64 Cephalization: Launch tarpc sidecar (.tarpc.sock) for binary-framed health
+    if !tcp_only {
+        let tarpc_socket = biomeos_primal_sdk::tarpc_transport::tarpc_socket_path(&socket_path);
+        info!("  tarpc Socket: {}", tarpc_socket.display());
+        spawn_tarpc_sidecar(&socket_path);
+    }
 
     let mut server = NeuralApiServer::new(graphs_dir, family_id, socket_path)
         .with_lifecycle_manager(lifecycle_manager);

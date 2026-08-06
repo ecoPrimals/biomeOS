@@ -55,6 +55,9 @@ base64 = { workspace = true }
 # pseudoSpore envelope validation (NC-1.4)
 biomeos-pseudospore = { path = "../biomeos-pseudospore" }
 
+# tarpc dual-socket sidecar (G64 cephalization)
+biomeos-primal-sdk = { path = "../biomeos-primal-sdk" }
+
 # Cryptographic randomness
 rand = { workspace = true }
 

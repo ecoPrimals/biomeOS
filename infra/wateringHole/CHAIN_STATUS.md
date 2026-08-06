@@ -160,11 +160,11 @@ Sovereign CI should be fully automated for all 13 primals including biomeOS.
 
 ---
 
-## biomeOS Posture: CEPHALIZATION ERA (G64 tarpc-wired)
+## biomeOS Posture: CEPHALIZATION ERA (G64 C2 dual-socket DONE)
 
 biomeOS Chain 1 complete. **All P0/P1/P2/P3 biomeOS-owned blockers resolved.**
 **G22 convergence COMPLETE**. Cell deploy graphs + **attach CLI** landed for ironGate Phase 1-2.
-**G64 Cephalization**: biomeOS is tarpc-wired — routes tarpc traffic, SDK ready, dual-socket pattern.
+**G64 Cephalization C2 DONE**: biomeOS serves `.tarpc.sock` sidecar (dual-socket pattern complete).
 Deep debt audit CLEAN: zero unsafe, zero TODOs, zero mocks, zero panic in prod.
 Data federation signals (3) integrated. 30 signals, 45 deploy graphs, 75 total.
 
