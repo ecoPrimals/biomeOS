@@ -30,6 +30,7 @@ biomeos-types = { path = "../biomeos-types" }
 biomeos-primal-sdk = { path = "../biomeos-primal-sdk" }
 tarpc = { workspace = true, features = ["tcp"] }
 tokio-serde = { workspace = true }
+tokio-util = { workspace = true }
 biomeos-graph = { path = "../biomeos-graph" }
 biomeos-system = { path = "../biomeos-system" }
 chrono = { workspace = true }

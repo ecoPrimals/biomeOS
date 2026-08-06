@@ -19,11 +19,30 @@ use tracing::{debug, info, warn};
 
 use super::NeuralApiServer;
 use super::btsp_negotiate::{self, BtspCipher, SessionKeys};
+use super::protocol_negotiation::{self, NegotiatedProtocol, NegotiationOutcome};
 
 impl NeuralApiServer {
     /// Handle a transport client connection (development mode, no BTSP).
+    ///
+    /// Supports G65 protocol negotiation: if the client sends a `PROTOCOLS:`
+    /// header as the first line, the server negotiates and dispatches to the
+    /// appropriate protocol handler. Otherwise falls back to JSON-RPC.
     pub async fn handle_connection(&self, stream: TransportStream) -> Result<()> {
-        self.handle_stream(BufReader::new(stream)).await
+        let mut reader = BufReader::new(stream);
+
+        match protocol_negotiation::negotiate_server(&mut reader).await? {
+            NegotiationOutcome::Negotiated(NegotiatedProtocol::Tarpc) => {
+                self.handle_tarpc_stream(reader).await
+            }
+            NegotiationOutcome::Negotiated(NegotiatedProtocol::JsonRpc) => {
+                self.handle_stream(reader).await
+            }
+            NegotiationOutcome::NotNegotiation(first_line) => {
+                self.handle_stream_with_first_line(reader, &first_line)
+                    .await
+            }
+            NegotiationOutcome::Closed => Ok(()),
+        }
     }
 
     /// Peek for riboCipher transport signal and consume if present.
@@ -77,8 +96,8 @@ impl NeuralApiServer {
             if enforce {
                 return Ok(());
             }
-            debug!("Accepting plain JSON-RPC connection (BTSP not enforced)");
-            return self.handle_stream(reader).await;
+            debug!("Accepting plain connection (BTSP not enforced) — trying G65 negotiation");
+            return self.handle_with_negotiation(reader).await;
         }
 
         match btsp_client::server_handshake(&mut reader).await {
@@ -163,6 +182,80 @@ impl NeuralApiServer {
             debug!("Accepting plain JSON-RPC TCP connection (BTSP not enforced)");
         }
         self.handle_stream(reader).await
+    }
+
+    /// G65 protocol negotiation on a plain (non-BTSP) connection.
+    ///
+    /// Peeks at the first line: if it's a `PROTOCOLS:` header, negotiates and
+    /// dispatches to the selected protocol. Otherwise treats it as JSON-RPC.
+    async fn handle_with_negotiation<S>(&self, mut reader: BufReader<S>) -> Result<()>
+    where
+        S: tokio::io::AsyncRead + AsyncWrite + Unpin + Send + 'static,
+    {
+        match protocol_negotiation::negotiate_server(&mut reader).await? {
+            NegotiationOutcome::Negotiated(NegotiatedProtocol::Tarpc) => {
+                self.handle_tarpc_stream(reader).await
+            }
+            NegotiationOutcome::Negotiated(NegotiatedProtocol::JsonRpc) => {
+                self.handle_stream(reader).await
+            }
+            NegotiationOutcome::NotNegotiation(first_line) => {
+                self.handle_stream_with_first_line(reader, &first_line)
+                    .await
+            }
+            NegotiationOutcome::Closed => Ok(()),
+        }
+    }
+
+    /// Dispatch a pre-read first line then continue as JSON-RPC stream.
+    async fn handle_stream_with_first_line<S>(
+        &self,
+        mut reader: BufReader<S>,
+        first_line: &str,
+    ) -> Result<()>
+    where
+        S: tokio::io::AsyncRead + AsyncWrite + Unpin,
+    {
+        if let Some(response_value) = self.dispatch_line(first_line).await {
+            let response_str = serde_json::to_string(&response_value)? + "\n";
+            let stream = reader.get_mut();
+            stream.write_all(response_str.as_bytes()).await?;
+            stream.flush().await?;
+        }
+        self.handle_stream(reader).await
+    }
+
+    /// Handle a tarpc connection on an already-negotiated stream.
+    ///
+    /// After G65 negotiation selects tarpc, the stream is wrapped in a
+    /// length-delimited Bincode transport and the `HealthRpc` service is
+    /// served on it. This enables single-socket tarpc without the `.tarpc.sock`
+    /// sidecar — the Phase 3 (G65) destination.
+    async fn handle_tarpc_stream<S>(&self, reader: BufReader<S>) -> Result<()>
+    where
+        S: tokio::io::AsyncRead + AsyncWrite + Unpin + Send + 'static,
+    {
+        use biomeos_primal_sdk::tarpc_transport::DefaultHealthService;
+        use biomeos_types::tarpc_types::HealthRpc;
+        use futures_util::StreamExt;
+        use tarpc::server::{BaseChannel, Channel};
+        use tokio_serde::formats::Bincode;
+
+        let stream = reader.into_inner();
+        let transport = tarpc::serde_transport::new(
+            tokio_util::codec::length_delimited::LengthDelimitedCodec::builder().new_framed(stream),
+            Bincode::default(),
+        );
+
+        let service = DefaultHealthService::new("biomeos");
+        let channel = BaseChannel::with_defaults(transport);
+        let mut requests = Box::pin(channel.execute(service.serve()));
+        while let Some(fut) = requests.next().await {
+            fut.await;
+        }
+
+        info!("G65 tarpc connection closed");
+        Ok(())
     }
 
     /// Post-handshake handler that checks for Phase 3 negotiate on the first line.

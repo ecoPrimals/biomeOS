@@ -163,11 +163,15 @@ Sovereign CI should be fully automated for all 13 primals including biomeOS.
 
 ---
 
-## biomeOS Posture: CEPHALIZATION ERA (G64 C2 dual-socket DONE)
+## biomeOS Posture: CEPHALIZATION ERA (G64 C2 DONE — G65-READY)
 
 biomeOS Chain 1 complete. **All P0/P1/P2/P3 biomeOS-owned blockers resolved.**
 **G22 convergence COMPLETE**. Cell deploy graphs + **attach CLI** landed for ironGate Phase 1-2.
 **G64 Cephalization C2 DONE**: biomeOS serves `.tarpc.sock` sidecar (dual-socket pattern complete).
+**G65 Protocol Negotiation**: **SHIPPED.** Each primal implements independently (no shared
+crate — primal violation per 156m). `protocol_negotiation.rs` + connection handler integration.
+Client sends `PROTOCOLS: tarpc,jsonrpc\n`, server selects, responds `PROTOCOL: tarpc\n`.
+10 tests. Backward-compatible (no header = JSON-RPC). tarpc served via LengthDelimited+Bincode.
 Deep debt audit CLEAN: zero unsafe, zero TODOs, zero mocks, zero panic in prod.
 Data federation signals (3) integrated. 30 signals, 45 deploy graphs, 75 total.
 
@@ -175,7 +179,7 @@ Data federation signals (3) integrated. 30 signals, 45 deploy graphs, 75 total.
 
 | Metric | Value |
 |--------|-------|
-| Tests | 8,578+ pass, 0 failures |
+| Tests | 8,588+ pass, 0 failures |
 | Clippy | 0 warnings (pedantic+nursery, --tests, -D warnings) |
 | Unsafe blocks | 0 (forbid) |
 | Largest prod file | 731 LOC |

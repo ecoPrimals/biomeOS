@@ -25,7 +25,7 @@ All primals MUST accept these environment variables (already in `biomeos-types`)
 | `FAMILY_ID` | Family-scoped socket naming | from `.family.seed` |
 | `XDG_RUNTIME_DIR` | Socket directory parent | `/run/user/$UID` |
 | `BIND_ADDRESS` | TCP bind address | `127.0.0.1` |
-| `PRIMAL_BIND_MODE` | Transport: `uds_only`, `tcp_only`, `dual` | `uds_only` |
+| `PRIMAL_BIND_MODE` | Transport: `uds_only`, `dual` (`tcp_only` DEPRECATED) | `uds_only` |
 
 All primals SHOULD accept these CLI flags (biomeOS already does):
 

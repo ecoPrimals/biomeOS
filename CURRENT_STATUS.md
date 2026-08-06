@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
 **Updated**: August 6, 2026
-**Version**: v4.57 (Wave 156j — Cephalization Advancing)
-**Posture**: CEPHALIZATION ERA — ZERO P0/P1/P2. G64 C2 dual-socket DONE. tcp_only DEPRECATED. Flaky tests FIXED. Deep debt CLEAN.
+**Version**: v4.57 (Wave 156m — G65 Protocol Negotiation SHIPPED)
+**Posture**: CEPHALIZATION ERA — ZERO P0/P1/P2. **G65 SHIPPED** (single-socket protocol negotiation). G64 C2 dual-socket DONE. tcp_only DEPRECATED. Deep debt CLEAN.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -11,7 +11,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Tests | 8,578+ pass, 0 failures |
+| Tests | 8,588+ pass, 0 failures |
 | Line Coverage | 88.37% (llvm-cov) |
 | Clippy | 0 warnings (pedantic+nursery, --tests, -D warnings) |
 | Unsafe blocks | 0 (`#![forbid(unsafe_code)]` on all 26 crates) |
@@ -41,7 +41,7 @@
 |-----------|--------|
 | Neural API | Production — capability routing, BTSP, riboCipher, connection pooling |
 | NUCLEUS Mode | Production — single-process: Neural API (JSON-RPC) + HTTP API (axum) |
-| Universal IPC v3.0 | Unix + Abstract + TCP + tarpc binary escalation |
+| Universal IPC v3.0 | Unix + Abstract + TCP + tarpc binary escalation (C2 dual-socket + **G65 negotiation**) |
 | BTSP Security | Phase 2+3 — Ed25519 handshake, ChaCha20-Poly1305 framing |
 | Dark Forest Gate | HTTP sovereign mode — X-Dark-Forest-Token |
 | Capability Registry | Runtime DashMap + redb persistence + 3-strike prune |
@@ -95,6 +95,7 @@
 | **tcp_only deprecated (atomic composition transport)** | v4.57 | Wave 156j |
 | **Hot-path Arc\<str\> (DashMap key optimization)** | v4.57 | Wave 156j |
 | **Flaky test fix (env-isolated discovery tests)** | v4.57 | Wave 156j |
+| **G65 protocol negotiation (single-socket, 10 tests)** | v4.57 | Wave 156m |
 
 ---
 
@@ -156,18 +157,30 @@ graphs. Squirrel needs to wire `signal.plan` → biomeOS `graph.execute`.
 
 Coevolution (G21) COMPLETE. Both P1s GATE VALIDATED on westGate and strandGate.
 
+**G65 Protocol Negotiation (Wave 156m — SHIPPED)**:
+- **Status**: SHIPPED — biomeOS implements G65 independently (no shared crate — primal violation per 156m)
+- G65 spec: client sends `PROTOCOLS: tarpc,jsonrpc\n`, server selects best match
+- No negotiation = JSON-RPC (backward-compatible)
+- Eliminates socket proliferation (dual-socket → single-socket)
+- Implementation: `protocol_negotiation.rs` (server + client + 10 tests)
+- Integration: `handle_connection` + `handle_with_negotiation` in `connection.rs`
+- tarpc path: `handle_tarpc_stream` serves HealthRpc via LengthDelimited + Bincode on negotiated stream
+- Backward-compatible: non-negotiated connections fall through to JSON-RPC (existing behavior preserved)
+
 Upstream items (not biomeOS code):
 - ~~C1: tarpc 0.34 → 0.37 for songBird + petalTongue~~ → **RESOLVED** (all 15 primals on 0.37)
+- **C7: G65 protocol negotiation** (each primal implements independently — no shared crate)
 - C3: coralReef JSON-RPC health shim (nestgate.io 13/13)
 - C4: toadStool deploy restart on sporeGate
-- C5: rustChip → Forgejo (cross-gate toadStool dev)
+- ~~C5: rustChip → Forgejo~~ → **RESOLVED**
 - O5: nestGate TCP on westGate
 - O7: Inter-gate `content.get` E2E (nestGate + songBird operational)
 
 Resume triggers:
 - ~~G64 Phase 2: biomeOS serves own `.tarpc.sock`~~ → **DONE** (`f29c38bb`)
+- ~~**G65 Phase 3**: Implement protocol negotiation~~ → **DONE** (protocol_negotiation.rs + connection.rs integration)
 - D1: `biomeos nucleus attach` for tideGlass on westGate
 - E2: squirrel systemd on ironGate (agent panel)
 - O7: Inter-gate `content.get` E2E (operational, not code)
-- G64 Phase 3: Remove deprecated tcp_only once all gates use Dual mode
+- G64 Phase 3 (cleanup): Remove deprecated tcp_only once all gates use Dual mode
 - Redeploy v4.57 to depot via Sovereign CI

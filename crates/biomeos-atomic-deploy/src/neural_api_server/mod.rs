@@ -26,6 +26,7 @@ mod connection;
 pub(crate) mod discovery_init;
 mod enrichment;
 mod listeners;
+pub(crate) mod protocol_negotiation;
 mod proxy;
 mod routing;
 mod rpc;

@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel v4.57 — G22 complete, cell attach CLI, 30 signal graphs, 27 domains, 320+ translations, zero blocking debt, ironGate Phase 1 OPERATIONALLY READY"
-date = 2026-08-04
+description = "Orchestration kernel v4.57 — G65 protocol negotiation SHIPPED, G64 C2 dual-socket, G22 complete, 30 signal graphs, 27 domains, 320+ translations, zero blocking debt"
+date = 2026-08-06
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]
@@ -9,8 +9,10 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 ## Status
 
-- **8,578+ tests** workspace-wide, 0 failures, fully concurrent
+- **8,588+ tests** workspace-wide, 0 failures, fully concurrent
 - **88%+ coverage** line / region / function (llvm-cov workspace-wide)
+- **v4.57** — Wave 156m: G65 protocol negotiation SHIPPED (single-socket, 10 tests)
+- **v4.57** — Wave 156l: G64 C2 dual-socket SHIPPED, `tcp_only` deprecated, `Arc<str>` hot paths, 3 flaky tests fixed
 - **v4.57** — Wave 156d: Cell attach CLI (`biomeos nucleus attach`), ironGate ops gap CLOSED
 - **v4.56** — Wave 155n/156b: G22 COMPLETE, cell deploy graphs, data federation signals
 - **v4.55** — Wave 155n: Coevolution contract (composition.test_swap), mode gap fix
@@ -40,7 +42,7 @@ functioning ecosystems. It does not perform compute, storage, or security
 itself; it coordinates the primals that do.
 
 - **NUCLEUS** — process supervision, startup ordering, auto-resurrection
-- **Neural API** — JSON-RPC routing, capability translation, signal dispatch, composition broker
+- **Neural API** — JSON-RPC routing, tarpc sidecar (C2 dual-socket), capability translation, signal dispatch, composition broker
 - **Plasmodium** — multi-machine meld/split/mix, cross-device federation, G8 multi-gate bonding
 - **Dark Forest** — zero metadata leakage, encrypted beacons, genetic model
 - **RootPulse** — emergent provenance pattern (rhizoCrypt + loamSpine + sweetGrass)
@@ -83,6 +85,7 @@ itself; it coordinates the primals that do.
 
 | Version | Date | Highlight |
 |---------|------|-----------|
+| v4.57 | Aug 6 | **G65 protocol negotiation SHIPPED** (single-socket tarpc+jsonrpc). G64 C2 dual-socket, `tcp_only` deprecated, `Arc<str>` hot paths, 3 flaky tests fixed |
 | v4.57 | Aug 4 | Cell attach CLI (`biomeos nucleus attach`), ironGate Phase 1 operationally ready |
 | v4.56 | Aug 3 | G22 COMPLETE, cell deploy graphs, data federation signals, 47 dead deps removed |
 | v4.55 | Jul 31 | Coevolution contract (composition.test_swap), btsp_optional mode gap |
