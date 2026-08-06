@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
 **Updated**: August 4, 2026
-**Version**: v4.57 (Wave 155v/156d — Cell Attach CLI + Deep Debt)
-**Posture**: SPRINGS-READY — ZERO P0/P1/P2. G22 COMPLETE. ironGate Phase 1 OPERATIONALLY READY.
+**Version**: v4.57 (Wave 156h — Cephalization Era)
+**Posture**: CEPHALIZATION ERA — ZERO P0/P1/P2. G64 tarpc-wired. ironGate Phase 1 OPERATIONALLY READY.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -107,7 +107,18 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 ## Posture
 
-biomeOS is **SPRINGS-READY**. G22 COMPLETE. ironGate Phase 1 OPERATIONALLY READY.
+biomeOS is in the **CEPHALIZATION ERA** (G64). G22 COMPLETE. ironGate Phase 1 OPERATIONALLY READY.
+
+**G64 Cephalization — biomeOS Role (Wave 156h)**:
+- **Status**: tarpc-wired (6/15 primals in this tier)
+- tarpc 0.37 (target version) in workspace
+- Dual-socket pattern implemented: `.sock` (JSON-RPC) + `.tarpc.sock` (binary)
+- Neural API router auto-escalates to tarpc when `.tarpc.sock` sibling exists
+- `ProtocolPreference` env-configurable (Auto/PreferTarpc/PreferJsonRpc/TarpcOnly/JsonRpcOnly)
+- SDK helpers for primals: `biomeos_primal_sdk::tarpc_transport::{serve_tarpc_health, tarpc_socket_path}`
+- Service definitions: `HealthRpc`, `DiscoveryRpc`, `SecurityRpc` traits in `biomeos-types`
+- Forwarding: health, discovery, security methods forwarded via tarpc binary framing
+- Next: biomeOS serves own `.tarpc.sock` for composition hot paths (Phase 2, after vanguard primals)
 
 **Cell Attach CLI (Aug 4 — Wave 155v/156d)**:
 - `biomeos nucleus attach <cell_graph.toml>` — closes the ops gap for live cell boot
@@ -142,11 +153,16 @@ graphs. Squirrel needs to wire `signal.plan` → biomeOS `graph.execute`.
 Coevolution (G21) COMPLETE. Both P1s GATE VALIDATED on westGate and strandGate.
 
 Upstream items (not biomeOS code):
-- GNU depot incomplete (4/16): sporeGate builder
-- Live inter-gate content.get E2E: nestGate + songBird operational test
+- C1: tarpc 0.34 → 0.37 for songBird + petalTongue (bincode 2.x migration)
+- C3: coralReef JSON-RPC health shim (nestgate.io 13/13)
+- C4: toadStool deploy restart on sporeGate
+- C5: rustChip → Forgejo (cross-gate toadStool dev)
+- O5: nestGate TCP on westGate
+- O7: Inter-gate `content.get` E2E (nestGate + songBird operational)
 
 Resume triggers:
-- `biomeos nucleus attach graphs/esotericwebb_cell.toml` on ironGate (Phase 1 boot)
-- G18: squirrel wires `signal.plan` → biomeOS `graph.execute`
-- Live E2E inter-gate content.get (operational, not code)
+- G64 Phase 2: biomeOS serves own `.tarpc.sock` (after vanguard primals deploy)
+- D1: `biomeos nucleus attach` for tideGlass on westGate
+- E2: squirrel systemd on ironGate (agent panel)
+- O7: Inter-gate `content.get` E2E (operational, not code)
 - Redeploy v4.57 to depot via Sovereign CI
