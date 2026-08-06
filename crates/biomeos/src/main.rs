@@ -92,15 +92,15 @@ enum Mode {
         #[arg(long)]
         port: Option<u16>,
 
-        /// Transport bind mode: uds_only | tcp_only | dual.
+        /// Transport bind mode: uds_only | dual.
         /// Reads PRIMAL_BIND_MODE env if not specified.
-        /// tcp_only: skip UDS bind (SELinux/Android). Also infers --btsp-optional.
-        /// dual: UDS primary + TCP alongside.
+        /// dual: UDS primary + TCP alongside (recommended for cross-gate access).
         /// uds_only: UDS only (default).
+        /// tcp_only: DEPRECATED — use dual instead. Transport resolved by composition.
         #[arg(long, value_name = "MODE")]
         bind_mode: Option<String>,
 
-        /// TCP-only mode (alias for --bind-mode tcp_only, kept for backward compat).
+        /// DEPRECATED: use --bind-mode dual. Transport resolved by atomic composition.
         #[arg(long, requires = "port", hide = true)]
         tcp_only: bool,
 
@@ -109,7 +109,7 @@ enum Mode {
         bind: Option<String>,
 
         /// Disable BTSP enforcement for unauthenticated JSON-RPC clients.
-        /// Auto-inferred when bind-mode is tcp_only (BTSP requires UDS).
+        /// Auto-inferred when bind-mode is tcp_only (legacy) or dual with external peers.
         #[arg(long)]
         btsp_optional: bool,
     },
@@ -261,12 +261,13 @@ pub(crate) enum NucleusCommand {
         #[arg(long)]
         port: Option<u16>,
 
-        /// Transport bind mode: uds_only | tcp_only | dual.
+        /// Transport bind mode: uds_only | dual.
         /// Reads PRIMAL_BIND_MODE env if not specified.
+        /// tcp_only: DEPRECATED — use dual instead. Transport resolved by composition.
         #[arg(long, value_name = "MODE")]
         bind_mode: Option<String>,
 
-        /// TCP-only mode (alias for --bind-mode tcp_only, kept for backward compat).
+        /// DEPRECATED: use --bind-mode dual. Transport resolved by atomic composition.
         #[arg(long, requires = "port", hide = true)]
         tcp_only: bool,
 
@@ -544,12 +545,24 @@ fn resolve_bind_mode(
 
     if let Some(mode_str) = cli_bind_mode {
         if let Some(mode) = BindMode::from_str_flexible(mode_str) {
+            if mode == BindMode::TcpOnly {
+                tracing::warn!(
+                    "DEPRECATED: --bind-mode tcp_only is a legacy pattern. \
+                     Use --bind-mode dual — transport strategy is resolved by \
+                     the gate's atomic composition profile."
+                );
+            }
             return mode;
         }
         tracing::warn!("Unknown --bind-mode '{mode_str}', falling back to env/default");
     }
 
     if tcp_only_flag {
+        tracing::warn!(
+            "DEPRECATED: --tcp-only is a legacy flag. \
+             Use --bind-mode dual — transport strategy is resolved by \
+             the gate's atomic composition profile."
+        );
         return BindMode::TcpOnly;
     }
 

@@ -4,9 +4,9 @@ Session handoff documents for upstream overwatch audit.
 
 Each file captures: what was done, metrics before/after, commits produced, and next-wave candidates.
 
-## ⚡ STATUS: CEPHALIZATION ERA — v4.57 G64 C2 dual-socket DONE
+## ⚡ STATUS: CEPHALIZATION ERA — v4.57 tcp_only DEPRECATED, flaky tests FIXED
 
-**Version**: v4.57 | **Tests**: 8,578+ | **biomeOS P2/P3 open**: 0 | **Posture**: CEPHALIZATION ERA (G64 C2 dual-socket, ironGate OPERATIONALLY READY)
+**Version**: v4.57 | **Tests**: 8,578+ (0 flakes) | **biomeOS P2/P3 open**: 0 | **Posture**: CEPHALIZATION ERA (G64 C2 dual-socket, tcp_only deprecated, deep debt CLEAN)
 
 ### Chain 1: biomeOS Orchestration Lifecycle — COMPLETE (v4.44–v4.48)
 
@@ -58,7 +58,8 @@ Each file captures: what was done, metrics before/after, commits produced, and n
 
 | Session | Date | Focus |
 |---------|------|-------|
-| **156j** | Aug 6, 2026 | **G64 C2 dual-socket DONE — biomeOS serves .tarpc.sock sidecar (tarpc-default + dual-socket)** |
+| **156j-b** | Aug 6, 2026 | **tcp_only DEPRECATED + Arc\<str\> hot-path + 3 flaky tests FIXED (env-isolated discovery)** |
+| 156j | Aug 6, 2026 | G64 C2 dual-socket DONE — biomeOS serves .tarpc.sock sidecar (tarpc-default + dual-socket) |
 | 156h | Aug 5, 2026 | G64 cephalization assessment — biomeOS tarpc-wired posture confirmed, deep debt CLEAN |
 | 156d | Aug 4, 2026 | `nucleus attach` CLI — closes cell attachment ops gap (ironGate Phase 1 OPERATIONALLY READY) |
 | 156b | Aug 4, 2026 | Cell deploy graphs (ironGate Phase 1-2) + 3 data federation signals + garden/protist bootstrap |

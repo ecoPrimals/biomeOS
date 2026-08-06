@@ -99,14 +99,14 @@ pub async fn run(
     info!("  Graphs Directory: {}", graphs_dir.display());
     info!("  Family ID: {}", family_id);
     if tcp_only {
-        info!(
-            "  Transport: TCP-only (port {}). \
-             UDS skipped — required for SELinux/Android substrates.",
+        warn!(
+            "  Transport: TCP-only (port {}) — DEPRECATED PATTERN. \
+             Use --bind-mode dual. Transport resolved by atomic composition.",
             tcp_port.unwrap_or(0)
         );
     } else if let Some(port) = tcp_port {
         info!("  Socket Path: {}", socket_path.display());
-        info!("  TCP Port: {port} (alongside UDS)");
+        info!("  TCP Port: {port} (dual mode: UDS primary + TCP alongside)");
     } else {
         info!("  Socket Path: {}", socket_path.display());
     }
@@ -200,14 +200,14 @@ pub async fn run_with_lifecycle(
     info!("  Family ID: {family_id}");
     info!("  Lifecycle: shared (NUCLEUS in-process manager)");
     if tcp_only {
-        info!(
-            "  Transport: TCP-only (port {}). \
-             UDS skipped — required for SELinux/Android substrates.",
+        warn!(
+            "  Transport: TCP-only (port {}) — DEPRECATED PATTERN. \
+             Use --bind-mode dual. Transport resolved by atomic composition.",
             tcp_port.unwrap_or(0)
         );
     } else if let Some(port) = tcp_port {
         info!("  Socket Path: {}", socket_path.display());
-        info!("  TCP Port: {port} (alongside UDS)");
+        info!("  TCP Port: {port} (dual mode: UDS primary + TCP alongside)");
     } else {
         info!("  Socket Path: {}", socket_path.display());
     }

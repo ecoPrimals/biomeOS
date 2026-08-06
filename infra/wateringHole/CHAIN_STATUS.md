@@ -1,6 +1,6 @@
 # biomeOS — Chain Status for Overwatch
 
-**Last Updated**: August 4, 2026
+**Last Updated**: August 6, 2026
 **Version**: v4.57
 **Team**: biomeOS
 **Gate**: eastGate
@@ -132,7 +132,7 @@ Sovereign CI should be fully automated for all 13 primals including biomeOS.
 
 ---
 
-## Deep Debt Audit — CLEAN (Aug 3, 2026)
+## Deep Debt Audit — CLEAN (Aug 6, 2026)
 
 | Category | Status |
 |----------|--------|
@@ -141,11 +141,14 @@ Sovereign CI should be fully automated for all 13 primals including biomeOS.
 | Dead dependencies | 0 (47 removed, cargo-machete verified) |
 | Production mocks | 0 |
 | Hardcoded primal names in prod | 0 |
-| Files >800 LOC | 0 (largest 716) |
+| Files >800 LOC | 0 (largest 731) |
 | C-wrapped deps | 0 |
 | `panic!` in prod | 0 |
 | `Box<dyn Error>` in prod signatures | 0 |
 | `std::sync::Mutex` issues | 0 (all short critical sections) |
+| Flaky tests | 0 (3 fixed — env-isolated socket discovery) |
+| DashMap\<String\> on hot paths | 0 (evolved to Arc\<str\>) |
+| Deprecated patterns | tcp_only mode deprecated (transport via atomic composition) |
 
 ---
 
@@ -175,7 +178,7 @@ Data federation signals (3) integrated. 30 signals, 45 deploy graphs, 75 total.
 | Tests | 8,578+ pass, 0 failures |
 | Clippy | 0 warnings (pedantic+nursery, --tests, -D warnings) |
 | Unsafe blocks | 0 (forbid) |
-| Largest prod file | 716 LOC |
+| Largest prod file | 731 LOC |
 | TODOs in prod | 0 |
 | Mocks in prod | 0 |
 | Dead code | 0 |

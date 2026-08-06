@@ -44,7 +44,7 @@ fn collect_paths_with_depth(dir: &Path, depth: usize, max_depth: usize, out: &mu
 #[derive(Debug)]
 pub struct ChimeraRegistry {
     /// Loaded chimera definitions (thread-safe)
-    definitions: DashMap<String, Arc<ChimeraDefinition>>,
+    definitions: DashMap<Arc<str>, Arc<ChimeraDefinition>>,
 
     /// Source directories
     source_dirs: Vec<PathBuf>,
@@ -120,10 +120,11 @@ impl ChimeraRegistry {
         debug!("Loading chimera from {:?}", path);
 
         let definition = ChimeraDefinition::from_file(path)?;
-        let id = definition.chimera.id.clone();
+        let id: Arc<str> = Arc::from(definition.chimera.id.as_str());
 
-        self.definitions.insert(id.clone(), Arc::new(definition));
         debug!("Registered chimera: {}", id);
+        self.definitions
+            .insert(Arc::clone(&id), Arc::new(definition));
 
         Ok(())
     }
@@ -142,8 +143,11 @@ impl ChimeraRegistry {
 
     /// List all chimera IDs
     #[must_use]
-    pub fn list(&self) -> Vec<String> {
-        self.definitions.iter().map(|r| r.key().clone()).collect()
+    pub fn list(&self) -> Vec<Arc<str>> {
+        self.definitions
+            .iter()
+            .map(|r| Arc::clone(r.key()))
+            .collect()
     }
 
     /// Get all chimera definitions
@@ -199,13 +203,13 @@ impl ChimeraRegistry {
 
     /// Get summary information
     #[must_use]
-    pub fn summary(&self) -> HashMap<String, ChimeraSummary> {
+    pub fn summary(&self) -> HashMap<Arc<str>, ChimeraSummary> {
         self.definitions
             .iter()
             .map(|r| {
                 let def = r.value();
                 (
-                    r.key().clone(),
+                    Arc::clone(r.key()),
                     ChimeraSummary {
                         name: def.chimera.name.clone(),
                         version: def.chimera.version.clone(),
@@ -331,8 +335,8 @@ fusion:
 
         let list = registry.list();
         assert_eq!(list.len(), 2);
-        assert!(list.contains(&"a".to_string()));
-        assert!(list.contains(&"b".to_string()));
+        assert!(list.contains(&Arc::from("a")));
+        assert!(list.contains(&Arc::from("b")));
 
         let all = registry.all();
         assert_eq!(all.len(), 2);

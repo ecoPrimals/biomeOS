@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
-**Updated**: August 4, 2026
+**Updated**: August 6, 2026
 **Version**: v4.57 (Wave 156j — Cephalization Advancing)
-**Posture**: CEPHALIZATION ERA — ZERO P0/P1/P2. G64 C2 dual-socket DONE. ironGate Phase 1 OPERATIONALLY READY.
+**Posture**: CEPHALIZATION ERA — ZERO P0/P1/P2. G64 C2 dual-socket DONE. tcp_only DEPRECATED. Flaky tests FIXED. Deep debt CLEAN.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -16,7 +16,7 @@
 | Clippy | 0 warnings (pedantic+nursery, --tests, -D warnings) |
 | Unsafe blocks | 0 (`#![forbid(unsafe_code)]` on all 26 crates) |
 | C dependencies | 0 (pure Rust stack, deny.toml enforced) |
-| Largest prod file | 716 LOC |
+| Largest prod file | 731 LOC |
 | TODOs in prod | 0 |
 | Production unwraps | 0 (workspace lint enforced) |
 | Dead code | 0 |
@@ -91,6 +91,10 @@
 | **G22 Steps 3-5: All modes unified, neural-api deprecated** | v4.56 | `b82f0925` |
 | Dep pruning round 3+4 (13 more dead deps, 47 total) | v4.56 | `4b48b83b`+`6a698078` |
 | **Cell attach CLI (`biomeos nucleus attach`)** | v4.57 | `9fcca6b8` |
+| **G64 C2 dual-socket (tarpc sidecar)** | v4.57 | `f29c38bb` |
+| **tcp_only deprecated (atomic composition transport)** | v4.57 | Wave 156j |
+| **Hot-path Arc\<str\> (DashMap key optimization)** | v4.57 | Wave 156j |
+| **Flaky test fix (env-isolated discovery tests)** | v4.57 | Wave 156j |
 
 ---
 
@@ -153,7 +157,7 @@ graphs. Squirrel needs to wire `signal.plan` → biomeOS `graph.execute`.
 Coevolution (G21) COMPLETE. Both P1s GATE VALIDATED on westGate and strandGate.
 
 Upstream items (not biomeOS code):
-- C1: tarpc 0.34 → 0.37 for songBird + petalTongue (bincode 2.x migration)
+- ~~C1: tarpc 0.34 → 0.37 for songBird + petalTongue~~ → **RESOLVED** (all 15 primals on 0.37)
 - C3: coralReef JSON-RPC health shim (nestgate.io 13/13)
 - C4: toadStool deploy restart on sporeGate
 - C5: rustChip → Forgejo (cross-gate toadStool dev)
@@ -161,8 +165,9 @@ Upstream items (not biomeOS code):
 - O7: Inter-gate `content.get` E2E (nestGate + songBird operational)
 
 Resume triggers:
-- G64 Phase 2: biomeOS serves own `.tarpc.sock` (after vanguard primals deploy)
+- ~~G64 Phase 2: biomeOS serves own `.tarpc.sock`~~ → **DONE** (`f29c38bb`)
 - D1: `biomeos nucleus attach` for tideGlass on westGate
 - E2: squirrel systemd on ironGate (agent panel)
 - O7: Inter-gate `content.get` E2E (operational, not code)
+- G64 Phase 3: Remove deprecated tcp_only once all gates use Dual mode
 - Redeploy v4.57 to depot via Sovereign CI

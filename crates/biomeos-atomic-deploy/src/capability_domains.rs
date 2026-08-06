@@ -24,13 +24,14 @@ use biomeos_types::primal_names::{
 use dashmap::DashMap;
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::LazyLock;
+use std::sync::{Arc, LazyLock};
 
 /// Lock-free runtime registry: capability name → advertising provider primal.
 ///
 /// Populated by socket discovery and `discovery.register_capability` advertisements.
 /// Takes precedence over compiled bootstrap hints.
-static RUNTIME_CAPABILITY_REGISTRY: LazyLock<DashMap<String, String>> = LazyLock::new(DashMap::new);
+static RUNTIME_CAPABILITY_REGISTRY: LazyLock<DashMap<Arc<str>, Arc<str>>> =
+    LazyLock::new(DashMap::new);
 
 /// Capability domain configuration for bootstrap hints.
 pub struct CapabilityDomain {
@@ -284,14 +285,14 @@ pub fn register_capability_provider(capability: &str, provider: &str) {
         return;
     }
 
-    let provider_owned = provider.to_string();
-    RUNTIME_CAPABILITY_REGISTRY.insert(capability.to_string(), provider_owned.clone());
+    let provider_arc: Arc<str> = Arc::from(provider);
+    RUNTIME_CAPABILITY_REGISTRY.insert(Arc::from(capability), Arc::clone(&provider_arc));
 
     if let Some((prefix, rest)) = capability.split_once('.') {
         if !rest.is_empty() {
             RUNTIME_CAPABILITY_REGISTRY
-                .entry(prefix.to_string())
-                .or_insert(provider_owned);
+                .entry(Arc::from(prefix))
+                .or_insert(provider_arc);
         }
     }
 }
@@ -299,13 +300,13 @@ pub fn register_capability_provider(capability: &str, provider: &str) {
 /// Resolve capability to provider: runtime registry first, bootstrap hints second.
 pub fn capability_to_provider(capability: &str) -> Option<String> {
     if let Some(provider) = RUNTIME_CAPABILITY_REGISTRY.get(capability) {
-        return Some(provider.clone());
+        return Some(provider.value().to_string());
     }
 
     if let Some(prefix) = capability.split('.').next() {
         if prefix != capability {
             if let Some(provider) = RUNTIME_CAPABILITY_REGISTRY.get(prefix) {
-                return Some(provider.clone());
+                return Some(provider.value().to_string());
             }
         }
     }

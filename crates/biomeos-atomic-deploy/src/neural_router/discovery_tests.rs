@@ -104,9 +104,20 @@ async fn test_discover_capability_unknown_category_string() {
 
 #[tokio::test]
 async fn test_discover_capability_http_alias_requires_registry() {
-    let router = NeuralRouter::new("http-test");
-    let err = router.discover_capability("http.get").await.unwrap_err();
-    assert!(!err.to_string().is_empty());
+    let iso = tempfile::tempdir().expect("tempdir");
+    let iso_path = iso.path().to_str().expect("utf8");
+    temp_env::async_with_vars(
+        [
+            ("BIOMEOS_SOCKET_DIR", Some(iso_path)),
+            ("XDG_RUNTIME_DIR", Some(iso_path)),
+        ],
+        async {
+            let router = NeuralRouter::new("http-test");
+            let err = router.discover_capability("http.get").await.unwrap_err();
+            assert!(!err.to_string().is_empty());
+        },
+    )
+    .await;
 }
 
 #[tokio::test]
@@ -173,53 +184,86 @@ async fn test_discover_tower_atomic_via_secure_http_alias() {
 
 #[tokio::test]
 async fn test_discover_nest_atomic_requires_storage() {
-    let router = NeuralRouter::new("nest-fam");
-    router
-        .register_capability("security", "bd", unix_endpoint("/tmp/nest-bd.sock"), "t")
-        .await
-        .unwrap();
-    router
-        .register_capability("discovery", "sb", unix_endpoint("/tmp/nest-sb.sock"), "t")
-        .await
-        .unwrap();
-    let err = router
-        .discover_capability("secure_storage")
-        .await
-        .unwrap_err();
-    assert!(
-        err.to_string().contains("storage") || err.to_string().contains("not found"),
-        "{}",
-        err
-    );
+    let iso = tempfile::tempdir().expect("tempdir");
+    let iso_path = iso.path().to_str().expect("utf8");
+    temp_env::async_with_vars(
+        [
+            ("BIOMEOS_SOCKET_DIR", Some(iso_path)),
+            ("XDG_RUNTIME_DIR", Some(iso_path)),
+        ],
+        async {
+            let router = NeuralRouter::new("nest-fam");
+            router
+                .register_capability("security", "bd", unix_endpoint("/tmp/nest-bd.sock"), "t")
+                .await
+                .unwrap();
+            router
+                .register_capability("discovery", "sb", unix_endpoint("/tmp/nest-sb.sock"), "t")
+                .await
+                .unwrap();
+            let err = router
+                .discover_capability("secure_storage")
+                .await
+                .unwrap_err();
+            assert!(
+                err.to_string().contains("storage") || err.to_string().contains("not found"),
+                "{}",
+                err
+            );
+        },
+    )
+    .await;
 }
 
 #[tokio::test]
 async fn test_discover_capability_category_discovery_unknown_maps_error() {
-    let router = NeuralRouter::new("cat-reg");
-    router
-        .register_capability(
-            "discovery.meta",
-            "songbird",
-            unix_endpoint("/tmp/discovery-meta.sock"),
-            "t",
-        )
-        .await
-        .unwrap();
-    let atomic = router
-        .discover_capability("discovery")
-        .await
-        .expect("discovery");
-    assert!(
-        atomic.primals.iter().any(|p| p.name.as_ref() == "songbird"),
-        "{atomic:?}"
-    );
+    let iso = tempfile::tempdir().expect("tempdir");
+    let iso_path = iso.path().to_str().expect("utf8");
+    temp_env::async_with_vars(
+        [
+            ("BIOMEOS_SOCKET_DIR", Some(iso_path)),
+            ("XDG_RUNTIME_DIR", Some(iso_path)),
+        ],
+        async {
+            let router = NeuralRouter::new("cat-reg");
+            router
+                .register_capability(
+                    "discovery.meta",
+                    "songbird",
+                    unix_endpoint("/tmp/discovery-meta.sock"),
+                    "t",
+                )
+                .await
+                .unwrap();
+            let atomic = router
+                .discover_capability("discovery")
+                .await
+                .expect("discovery");
+            assert!(
+                atomic.primals.iter().any(|p| p.name.as_ref() == "songbird"),
+                "{atomic:?}"
+            );
+        },
+    )
+    .await;
 }
 
 #[tokio::test]
 async fn test_discover_capability_http_post_alias() {
-    let router = NeuralRouter::new("http-post");
-    let err = router.discover_capability("http.post").await.unwrap_err();
-    assert!(!err.to_string().is_empty());
+    let iso = tempfile::tempdir().expect("tempdir");
+    let iso_path = iso.path().to_str().expect("utf8");
+    temp_env::async_with_vars(
+        [
+            ("BIOMEOS_SOCKET_DIR", Some(iso_path)),
+            ("XDG_RUNTIME_DIR", Some(iso_path)),
+        ],
+        async {
+            let router = NeuralRouter::new("http-post");
+            let err = router.discover_capability("http.post").await.unwrap_err();
+            assert!(!err.to_string().is_empty());
+        },
+    )
+    .await;
 }
 
 #[tokio::test]

@@ -308,9 +308,17 @@ impl NeuralApiServer {
         self
     }
 
-    /// Enable TCP-only mode (skip UDS binding, mobile/cross-gate).
+    /// DEPRECATED: Enable TCP-only mode (skip UDS binding).
+    ///
+    /// Use `with_tcp_port()` + `Dual` bind mode instead. Transport strategy
+    /// should be resolved by the gate's atomic composition profile, not a
+    /// global "skip UDS" flag. This method will be removed in a future version.
     #[must_use]
     pub fn with_tcp_only(mut self, port: u16) -> Self {
+        tracing::warn!(
+            "DEPRECATED: with_tcp_only() is a legacy pattern. \
+             Use Dual bind mode — transport resolved by atomic composition."
+        );
         self.tcp_port = Some(port);
         self.tcp_only = true;
         self

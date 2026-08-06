@@ -431,9 +431,19 @@ fn strict_discovery_with(env: &HashMap<String, String>) -> bool {
 pub enum BindMode {
     /// UDS only (default on Linux with accessible socket dirs).
     UdsOnly,
-    /// TCP only — skip all UDS `bind()`. Required for SELinux/Android.
+    /// TCP only — skip all UDS `bind()`.
+    ///
+    /// DEPRECATED: This was designed for substrates where UDS is unavailable.
+    /// The correct pattern is `Dual` mode with transport resolved by the gate's
+    /// atomic composition profile. Mobile/embedded gates use Tower Atomic with
+    /// TCP transport via songBird mesh relay — not a global "skip UDS" flag.
+    /// Retained for backward compatibility; will be removed in a future version.
     TcpOnly,
     /// Dual: UDS primary + TCP alongside (for cross-gate/mobile access).
+    ///
+    /// Recommended for any gate that needs TCP accessibility. The atomic
+    /// composition determines which transports peers use — UDS for intra-gate,
+    /// TCP for cross-gate/mobile. This replaces the old `tcp_only` pattern.
     Dual,
 }
 
@@ -483,9 +493,8 @@ impl std::fmt::Display for BindMode {
 
 /// Returns `true` when `PRIMAL_BIND_MODE` is set to `tcp_only`.
 ///
-/// When true, all server bind paths should skip UDS and serve TCP only.
-/// This is the ecosystem-wide env var convention for SELinux/Android
-/// substrates where `sock_file create` is denied by policy.
+/// DEPRECATED: Prefer `Dual` mode with transport resolved by atomic composition.
+/// Retained for backward compatibility — will log a deprecation warning at startup.
 #[must_use]
 pub fn is_tcp_only_bind_mode() -> bool {
     BindMode::from_env_or(BindMode::UdsOnly).is_tcp_only()
