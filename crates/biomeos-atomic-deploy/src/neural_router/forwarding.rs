@@ -43,13 +43,41 @@ pub fn parse_security_bytes_param(params: &Value, key: &str) -> Result<Bytes> {
 }
 
 impl NeuralRouter {
-    /// Forward JSON-RPC request to primal via any transport
+    /// Forward JSON-RPC request to primal via any transport.
     ///
     /// **Universal IPC v3.0**: Routes through Unix, abstract, TCP, or HTTP
     /// based on the endpoint's transport type.
     ///
-    /// **JSON-RPC AND tarpc first**: Checks protocol availability and preferences.
+    /// **Protocol escalation**: Attempts tarpc first (if available), then
+    /// BTSP handshake (for family-scoped sockets in production), then raw
+    /// JSON-RPC as final fallback. The entire flow is wrapped in
+    /// `request_timeout` to prevent cumulative hangs across layers.
     pub async fn forward_request(
+        &self,
+        endpoint: &TransportEndpoint,
+        method: &str,
+        params: &Value,
+    ) -> Result<Value> {
+        tokio::time::timeout(
+            self.request_timeout,
+            self.forward_request_escalation(endpoint, method, params),
+        )
+        .await
+        .map_err(|_| {
+            anyhow::anyhow!(
+                "Forward to {} timed out after {}ms (method: {})",
+                endpoint.display_string(),
+                self.request_timeout.as_millis(),
+                method,
+            )
+        })?
+    }
+
+    /// Inner escalation logic for `forward_request` — tarpc → BTSP → JSON-RPC.
+    ///
+    /// Called within the outer timeout wrapper so the total wall time across
+    /// all escalation layers is bounded by `request_timeout`.
+    async fn forward_request_escalation(
         &self,
         endpoint: &TransportEndpoint,
         method: &str,
@@ -174,10 +202,14 @@ impl NeuralRouter {
 
     /// Forward with an envelope-derived timeout cap (JH-2).
     ///
+    /// Uses the pooled JSON-RPC path with a single clean timeout.
     /// If `timeout_cap` is `Some`, the actual forwarding timeout is
-    /// `min(self.request_timeout, timeout_cap)`. This ensures scoped
-    /// tokens with `timeout_ms` cannot exceed the system default but
-    /// *can* impose a tighter deadline.
+    /// `min(self.request_timeout, timeout_cap)`. If `None`, uses
+    /// `self.request_timeout` as the deadline.
+    ///
+    /// This path intentionally skips tarpc escalation and BTSP
+    /// negotiation — those are heavyweight for capability routing and
+    /// caused forwarding hangs in dev-mode environments (G67 N1).
     pub async fn forward_request_with_timeout(
         &self,
         endpoint: &TransportEndpoint,
@@ -185,13 +217,12 @@ impl NeuralRouter {
         params: &Value,
         timeout_cap: Option<std::time::Duration>,
     ) -> Result<Value> {
-        if let Some(cap) = timeout_cap {
-            let effective = self.request_timeout.min(cap);
-            return self
-                .forward_request_inner(endpoint, method, params, effective)
-                .await;
-        }
-        self.forward_request(endpoint, method, params).await
+        let effective = match timeout_cap {
+            Some(cap) => self.request_timeout.min(cap),
+            None => self.request_timeout,
+        };
+        self.forward_request_inner(endpoint, method, params, effective)
+            .await
     }
 
     /// Inner forwarding with an explicit timeout (used by `forward_request_with_timeout`).
