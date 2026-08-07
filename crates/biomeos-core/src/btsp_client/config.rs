@@ -48,13 +48,16 @@ pub fn btsp_strict_mode_expected() -> bool {
         .is_ok_and(|v| v.trim() == "1")
 }
 
-/// Whether the given Unix socket path targets the security provider (bearDog).
+/// Whether the given Unix socket path targets the security provider.
+///
+/// Resolves via capability-based env vars first, then taxonomy-derived
+/// provider name, finally legacy `BEARDOG_SOCKET` for backward compat.
 #[must_use]
 pub fn is_security_provider_socket(path: &Path) -> bool {
     for env_key in [
-        biomeos_types::env_config::vars::BEARDOG_SOCKET,
-        "SECURITY_PROVIDER_SOCKET",
         "BIOMEOS_SECURITY_SOCKET",
+        "SECURITY_PROVIDER_SOCKET",
+        biomeos_types::env_config::vars::BEARDOG_SOCKET,
     ] {
         if let Ok(p) = std::env::var(env_key) {
             if Path::new(&p) == path {

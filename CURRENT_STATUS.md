@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
-**Updated**: August 6, 2026
-**Version**: v4.57 (Wave 156m — G65 Protocol Negotiation SHIPPED)
-**Posture**: CEPHALIZATION ERA — ZERO P0/P1/P2. **G65 SHIPPED** (single-socket protocol negotiation). G64 C2 dual-socket DONE. tcp_only DEPRECATED. Deep debt CLEAN.
+**Updated**: August 7, 2026
+**Version**: v4.57+ (Wave 157a — G67 Neural API Activation, Stage 2)
+**Posture**: STAGE 2 CODE TEAM HANDOFF — G64+G65+G66 COMPLETE (cephalization trilogy). G67 N1 forwarding fix SHIPPED. Neural API is the routing substrate. ZERO P0/P1/P2. Deep debt CLEAN.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -11,7 +11,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Tests | 8,588+ pass, 0 failures |
+| Tests | 8,570+ (578 unit, 456 neural API) pass, 0 failures |
 | Line Coverage | 88.37% (llvm-cov) |
 | Clippy | 0 warnings (pedantic+nursery, --tests, -D warnings) |
 | Unsafe blocks | 0 (`#![forbid(unsafe_code)]` on all 26 crates) |
@@ -112,7 +112,23 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 ## Posture
 
-biomeOS is in the **CEPHALIZATION ERA** (G64). G22 COMPLETE. ironGate Phase 1 OPERATIONALLY READY.
+biomeOS is in **STAGE 2 NEURAL API ACTIVATION** (G67). G64+G65+G66 COMPLETE (cephalization trilogy). G22 COMPLETE. ironGate Phase 1 OPERATIONALLY READY.
+
+**G67 Neural API Activation — Stage 2 (Wave 157a)**:
+- **N1 DONE**: Forwarding fix — pool path for `capability.call`, outer timeout for escalation (`ffed2c5b`)
+- **N2-N6 PENDING**: Live activation (primalSpring team)
+- riboCipher-aware connection pooling SHIPPED (dual pool lanes: plain + `[0xEC,0x01]` prefixed)
+- Bootstrap→Coordinated auto-transition watcher (15s probe, max 10min)
+- TOML-driven capability translations (`config/capability_registry.toml` → compiled fallback)
+- Capability-first security resolution (env priority: `BIOMEOS_SECURITY_SOCKET` > `SECURITY_PROVIDER_SOCKET` > legacy)
+
+**G66 Transport Abstraction — COMPLETE (Wave 156z)**:
+- All 15 primals: `TransportEndpoint`/`TransportStream`/`connect_transport`
+- Silicon-agnostic IPC: Unix + Abstract + TCP + Named Pipes (Windows)
+- Cross-arch 15/15: x86_64-linux, aarch64-linux, x86_64-windows-gnu
+
+**G65 Protocol Negotiation — COMPLETE (Wave 156m)**:
+- Single-socket dual-protocol (tarpc + JSON-RPC) — eliminates socket proliferation
 
 **G64 Cephalization — biomeOS C2 Dual-Socket DONE (Wave 156j)**:
 - **Status**: tarpc-default + dual-socket (7/15 primals now in this tier)
@@ -179,8 +195,10 @@ Upstream items (not biomeOS code):
 Resume triggers:
 - ~~G64 Phase 2: biomeOS serves own `.tarpc.sock`~~ → **DONE** (`f29c38bb`)
 - ~~**G65 Phase 3**: Implement protocol negotiation~~ → **DONE** (protocol_negotiation.rs + connection.rs integration)
+- ~~**G67 N1**: Forwarding fix + riboCipher pool~~ → **DONE** (Wave 157a)
+- **G67 N2-N6**: Stage 2 live activation (primalSpring validates)
 - D1: `biomeos nucleus attach` for tideGlass on westGate
 - E2: squirrel systemd on ironGate (agent panel)
 - O7: Inter-gate `content.get` E2E (operational, not code)
 - G64 Phase 3 (cleanup): Remove deprecated tcp_only once all gates use Dual mode
-- Redeploy v4.57 to depot via Sovereign CI
+- Redeploy v4.57+ to depot via Sovereign CI

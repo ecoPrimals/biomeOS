@@ -36,11 +36,20 @@ type MethodTranslation = (&'static str, &'static str);
 /// Domain provider mapping: (`primal_name`, `domain_name`, `method_translations`)
 type DomainProvider = (&'static str, &'static str, &'static [MethodTranslation]);
 
-/// Load default translations into the registry.
+/// Load capability translations into the registry.
+///
+/// **Resolution order** (first success wins):
+/// 1. `config/capability_registry.toml` — data-driven, no recompile needed
+/// 2. Compiled defaults (this file) — cold-start fallback
 ///
 /// Resolves providers via environment variables (BIOMEOS_*_PROVIDER).
 /// When `BIOMEOS_STRICT_DISCOVERY` is set, unset providers are skipped.
 pub fn load_defaults_into(registry: &mut CapabilityTranslationRegistry, family_id: &str) -> usize {
+    let toml_path = std::path::Path::new("config/capability_registry.toml");
+    if let Some(count) = super::toml_loader::load_from_registry_toml(registry, toml_path, family_id)
+    {
+        return count;
+    }
     load_defaults_into_with(registry, family_id, &HashMap::new())
 }
 

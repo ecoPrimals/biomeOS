@@ -4,7 +4,7 @@
 
 ---
 
-## Status: Production Ready (v4.57)
+## Status: Production Ready (v4.57+ / Wave 157a)
 
 | Metric | Value |
 |--------|-------|
@@ -12,7 +12,7 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP; HTTP removed v3.97) + tarpc binary escalation (wired) + DashMap connection pool on neural router hot path |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, all monoliths split into semantic modules, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, dashmap 6, toml 0.9, axum 0.8, capability-based composition, UDS dual-protocol auto-detect, zero `Box<dyn Error>`, zero clippy warnings, workspace-level `unwrap_used = "deny"`, connection pool on hot dispatch path) |
-| Tests | 8,578+ workspace-wide, 0 regressions, fully concurrent — 88.37% line / 89.58% function (llvm-cov). Deep debt audit CLEAN: zero unsafe, zero TODOs, zero mocks, zero panic in prod |
+| Tests | 8,700+ workspace-wide, 0 regressions, fully concurrent — 88.37% line / 89.58% function (llvm-cov). Deep debt audit CLEAN: zero unsafe, zero TODOs, zero mocks, zero panic in prod |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 16-crate ban list enforced) |
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings`, zero errors including `--tests` (verified Jul 31 2026) |
@@ -20,7 +20,7 @@
 | License | scyBorg triple-copyleft (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0) |
 | Deployment | USB + Pixel + Cross-Device AI + mobile (TCP fallback) |
 | AI Bridge | Capability-routed to Squirrel (tag-in at runtime; biomeOS runs without AI primal) |
-| Neural API | 320+ capability translations, 27 domains (+ tensor/math/stats + manifest), 5 coordination patterns, auto-discovery, lazy rescan, cross-gate routing via Songbird mesh dispatch, formalized `capability.call` routing contract, adaptive routing weights (redb-persistent), attestation verification, `manifest.gate_profile`, `executor.list`/`executor.status`, `cleanup.sockets`, **UDS connection pooling** |
+| Neural API | 320+ capability translations (TOML-driven + compiled fallback), 27 domains (+ tensor/math/stats + manifest), 5 coordination patterns, auto-discovery, lazy rescan, cross-gate routing via Songbird mesh dispatch, formalized `capability.call` routing contract, adaptive routing weights (redb-persistent), attestation verification, `manifest.gate_profile`, `executor.list`/`executor.status`, `cleanup.sockets`, **riboCipher-aware dual-lane connection pooling**, Bootstrap→Coordinated auto-transition |
 | Genetics | `GeneticsTier` enforcement on graphs (`none`/`tag`/`mito_beacon`/`nuclear`), preflight validation |
 | Deploy Resolution | `AtomicComposition` auto-resolved from node capabilities (Tower/Node/Nest/Nucleus) |
 | Composition | Multi-primal graph execution (5+ nodes) proven e2e; `composition.health` capability-domain driven; `lifecycle.composition` enriched dashboard; membrane + nucleated composition models |

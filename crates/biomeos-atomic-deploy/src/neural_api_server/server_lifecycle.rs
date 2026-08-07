@@ -225,6 +225,55 @@ impl NeuralApiServer {
             info!("🔍 Background discovery sweep started (interval: 30s)");
         }
 
+        // 5e. Bootstrap → Coordinated mode transition watcher.
+        // If we started in Bootstrap (Tower Atomic wasn't reachable at boot),
+        // periodically re-probe and auto-transition when Tower comes online.
+        {
+            let mode = Arc::clone(&self.mode);
+            let family_id = self.family_id.clone();
+            tokio::spawn(async move {
+                const PROBE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(15);
+                const MAX_PROBES: u32 = 40; // give up after ~10 minutes
+
+                for attempt in 1..=MAX_PROBES {
+                    {
+                        let current = mode.read().await;
+                        if *current == BiomeOsMode::Coordinated {
+                            info!("🔄 Mode watcher: already Coordinated — exiting probe loop");
+                            return;
+                        }
+                    }
+
+                    tokio::time::sleep(PROBE_INTERVAL).await;
+
+                    if BiomeOsMode::detect_with_mode(&family_id, None).await
+                        == BiomeOsMode::Coordinated
+                    {
+                        info!(
+                            "🔄 Mode watcher: Tower Atomic detected on probe {attempt}/{MAX_PROBES} \
+                             — transitioning to Coordinated"
+                        );
+                        if let Err(e) =
+                            crate::bootstrap::transition_to_coordinated(&family_id).await
+                        {
+                            warn!("⚠️  Mode watcher: transition failed: {e}");
+                            continue;
+                        }
+                        let mut m = mode.write().await;
+                        *m = BiomeOsMode::Coordinated;
+                        info!("✅ Mode watcher: now operating in COORDINATED MODE");
+                        return;
+                    }
+                }
+
+                warn!(
+                    "⚠️  Mode watcher: Tower Atomic not detected after {MAX_PROBES} probes \
+                     — staying in Bootstrap mode (manual restart required for transition)"
+                );
+            });
+            info!("🔄 Bootstrap→Coordinated mode watcher started (probe interval: 15s)");
+        }
+
         // 6. Accept connections on bound listener(s)
         match (uds_listener, tcp_listener) {
             (Some(uds), Some(tcp)) => {

@@ -34,6 +34,7 @@
 
 mod defaults;
 mod socket;
+mod toml_loader;
 
 use anyhow::{Context, Result, anyhow};
 use biomeos_core::atomic_client::AtomicClient;
@@ -42,6 +43,7 @@ use std::collections::HashMap;
 use tracing::{debug, info, trace};
 
 pub use socket::{resolve_primal_socket, resolve_primal_socket_with};
+pub use toml_loader::load_from_registry_toml;
 
 /// Capability translation entry
 #[derive(Debug, Clone, Serialize, Deserialize)]

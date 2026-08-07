@@ -221,22 +221,60 @@ impl NeuralRouter {
             Some(cap) => self.request_timeout.min(cap),
             None => self.request_timeout,
         };
-        self.forward_request_inner(endpoint, method, params, effective)
+        let use_ribocipher = Self::endpoint_requires_ribocipher(endpoint);
+        self.forward_request_inner(endpoint, method, params, effective, use_ribocipher)
             .await
     }
 
-    /// Inner forwarding with an explicit timeout (used by `forward_request_with_timeout`).
+    /// Forward with riboCipher framing explicitly enabled.
+    ///
+    /// Same as [`forward_request_with_timeout`] but unconditionally prepends
+    /// the `[0xEC, 0x01]` riboCipher transport signal on fresh connections.
+    /// Use for endpoints known to enforce riboCipher (other Neural API instances,
+    /// cross-gate relay targets, NUCLEUS-deployed primals with strict policy).
+    pub async fn forward_request_ribocipher(
+        &self,
+        endpoint: &TransportEndpoint,
+        method: &str,
+        params: &Value,
+        timeout_cap: Option<std::time::Duration>,
+    ) -> Result<Value> {
+        let effective = match timeout_cap {
+            Some(cap) => self.request_timeout.min(cap),
+            None => self.request_timeout,
+        };
+        self.forward_request_inner(endpoint, method, params, effective, true)
+            .await
+    }
+
+    /// Heuristic: does this endpoint require riboCipher transport framing?
+    ///
+    /// Neural API sockets (containing "neural-api" in the path) enforce
+    /// riboCipher by default. Plain primal sockets accept raw JSON-RPC.
+    fn endpoint_requires_ribocipher(endpoint: &TransportEndpoint) -> bool {
+        match endpoint {
+            TransportEndpoint::UnixSocket { path } => {
+                let name = path.to_string_lossy();
+                name.contains("neural-api") || name.contains("biomeos-neural")
+            }
+            _ => false,
+        }
+    }
+
+    /// Inner forwarding with an explicit timeout and optional riboCipher framing.
     async fn forward_request_inner(
         &self,
         endpoint: &TransportEndpoint,
         method: &str,
         params: &Value,
         timeout: std::time::Duration,
+        ribocipher: bool,
     ) -> Result<Value> {
         let start = std::time::Instant::now();
 
         debug!(
-            "   → Forwarding via JSON-RPC (timeout {}ms): {} to {}",
+            "   → Forwarding via JSON-RPC{} (timeout {}ms): {} to {}",
+            if ribocipher { "+riboCipher" } else { "" },
             timeout.as_millis(),
             method,
             endpoint.display_string()
@@ -250,7 +288,13 @@ impl NeuralRouter {
         };
 
         let result = tokio::time::timeout(timeout, async {
-            self.connection_pool.send_jsonrpc(endpoint, request).await
+            if ribocipher {
+                self.connection_pool
+                    .send_ribocipher_jsonrpc(endpoint, request)
+                    .await
+            } else {
+                self.connection_pool.send_jsonrpc(endpoint, request).await
+            }
         })
         .await
         .map_err(|_| {
