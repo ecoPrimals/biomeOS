@@ -367,13 +367,7 @@ impl ComponentInstance {
         std::fs::write(output_path, &script)?;
 
         // Make executable
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(output_path)?.permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(output_path, perms)?;
-        }
+        biomeos_types::platform_substrate::PlatformAccess::Executable.apply(output_path)?;
 
         Ok(())
     }

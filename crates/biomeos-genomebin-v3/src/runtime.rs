@@ -11,6 +11,7 @@
 
 use crate::{Arch, GenomeBin};
 use anyhow::{Context, Result};
+use biomeos_types::platform_substrate::PlatformAccess;
 use std::path::{Path, PathBuf};
 
 impl GenomeBin {
@@ -39,14 +40,7 @@ impl GenomeBin {
         std::fs::write(&binary_path, decompressed)
             .with_context(|| format!("Failed to write binary: {}", binary_path.display()))?;
 
-        // Make executable on Unix
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = binary_path.metadata()?.permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(&binary_path, perms)?;
-        }
+        PlatformAccess::Executable.apply(&binary_path)?;
 
         tracing::info!("✅ Extracted to: {}", binary_path.display());
 

@@ -1085,11 +1085,139 @@ capabilities = [
 "auth.token.create" = { provider = "beardog", method = "auth.token.create" }
 "auth.token.revoke" = { provider = "beardog", method = "auth.token.revoke" }
 
-# ==============================================================================
-# SOCKET PATH TEMPLATES
-# ==============================================================================
-# ATOMIC-TIER SEMANTIC TRANSLATIONS
-# ==============================================================================
+# ------------------------------------------------------------------------------
+# Sandbox Domain (skunkBat)
+# Ephemeral compute environments, sandboxed execution, experiments.
+# skunkBat provides isolated execution contexts for untrusted or experimental
+# code — containerized runners, temp filesystems, process isolation.
+# Added: D8 routing gap closure (Aug 7, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.sandbox]
+provider = "skunkbat"
+capabilities = [
+    "sandbox",
+    "sandbox.create",
+    "sandbox.execute",
+    "sandbox.destroy",
+    "experiment",
+]
+
+[translations.sandbox]
+"sandbox.create" = { provider = "skunkbat", method = "sandbox.create" }
+"sandbox.execute" = { provider = "skunkbat", method = "sandbox.execute" }
+"sandbox.destroy" = { provider = "skunkbat", method = "sandbox.destroy" }
+"sandbox.list" = { provider = "skunkbat", method = "sandbox.list" }
+"sandbox.status" = { provider = "skunkbat", method = "sandbox.status" }
+"experiment.run" = { provider = "skunkbat", method = "experiment.run" }
+"experiment.results" = { provider = "skunkbat", method = "experiment.results" }
+
+# ------------------------------------------------------------------------------
+# Compliance Domain (sourDough)
+# Primal lifecycle compliance, G68 validation, scaffold generation,
+# platform substrate enforcement, ecosystem standards.
+# Added: D8 routing gap closure (Aug 7, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.compliance]
+provider = "sourdough"
+capabilities = [
+    "compliance",
+    "compliance.validate",
+    "compliance.scaffold",
+    "lifecycle",
+    "platform_substrate",
+]
+
+[translations.compliance]
+"compliance.validate" = { provider = "sourdough", method = "compliance.validate" }
+"compliance.scaffold" = { provider = "sourdough", method = "compliance.scaffold" }
+"compliance.audit" = { provider = "sourdough", method = "compliance.audit" }
+"compliance.fix" = { provider = "sourdough", method = "compliance.fix" }
+"lifecycle.check" = { provider = "sourdough", method = "lifecycle.check" }
+"platform_substrate.validate" = { provider = "sourdough", method = "platform_substrate.validate" }
+
+# ------------------------------------------------------------------------------
+# Integration Domain (primalSpring)
+# Ecosystem integration testing, IPC resilience, multi-primal composition probes.
+# primalSpring is the integration-test primal — it validates cross-primal
+# communication and composes N2-N5 verification workflows.
+# Added: D8 routing gap closure (Aug 7, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.integration]
+provider = "primalspring"
+capabilities = [
+    "integration",
+    "integration.probe",
+    "integration.compose",
+    "composition",
+    "composition.test_swap",
+]
+
+[translations.integration]
+"integration.probe" = { provider = "primalspring", method = "integration.probe" }
+"integration.compose" = { provider = "primalspring", method = "integration.compose" }
+"integration.health_matrix" = { provider = "primalspring", method = "integration.health_matrix" }
+"composition.test_swap" = { provider = "primalspring", method = "composition.test_swap" }
+"composition.validate" = { provider = "primalspring", method = "composition.validate" }
+
+# ------------------------------------------------------------------------------
+# Provenance Federation Domain (rootPulse)
+# Cross-gate provenance federation, branching, merging, diffing.
+# rootPulse coordinates the provenance trio across gate boundaries.
+# Added: D8 routing gap closure (Aug 7, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.provenance_federation]
+provider = "rootpulse"
+capabilities = [
+    "provenance_federation",
+    "rootpulse",
+    "branch",
+    "merge",
+    "diff",
+]
+
+[translations.provenance_federation]
+"rootpulse.branch" = { provider = "rootpulse", method = "rootpulse.branch" }
+"rootpulse.merge" = { provider = "rootpulse", method = "rootpulse.merge" }
+"rootpulse.diff" = { provider = "rootpulse", method = "rootpulse.diff" }
+"rootpulse.sync" = { provider = "rootpulse", method = "rootpulse.sync" }
+"rootpulse.commit" = { provider = "rootpulse", method = "rootpulse.commit" }
+"rootpulse.status" = { provider = "rootpulse", method = "rootpulse.status" }
+"rootpulse.health" = { provider = "rootpulse", method = "rootpulse.health" }
+
+# ------------------------------------------------------------------------------
+# Cell Composition Domains (esotericWebb, footPrint, tideGlass)
+# These are cell-level primals (multi-primal compositions). They register
+# their own niche capabilities but need domain entries for Neural API routing.
+# Added: D8 routing gap closure (Aug 7, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.game_cell]
+provider = "esotericwebb"
+capabilities = [
+    "game_cell",
+    "crpg",
+    "cell.esotericwebb",
+]
+
+[domains.spatial]
+provider = "footprint"
+capabilities = [
+    "spatial",
+    "gis",
+    "cell.footprint",
+]
+
+[domains.drug_science]
+provider = "tideglass"
+capabilities = [
+    "drug_science",
+    "repurposing",
+    "cell.tideglass",
+]
 # These are composite operations that span multiple primals and are resolved
 # via signal graphs. The "provider" is biomeOS itself — the Neural API
 # intercepts these and dispatches via the corresponding signal graph TOML.

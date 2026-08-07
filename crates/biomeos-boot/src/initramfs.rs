@@ -7,6 +7,7 @@
 //! Creates a minimal boot environment with `BiomeOS` binaries.
 
 use anyhow::{Context, Result};
+use biomeos_types::platform_substrate::PlatformAccess;
 use flate2::Compression;
 use flate2::write::GzEncoder;
 use std::fs::{self, File};
@@ -235,12 +236,15 @@ impl InitramfsBuilder {
             })?;
 
             // Set permissions
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                let perms = fs::Permissions::from_mode(binary.permissions);
-                fs::set_permissions(&dest_path, perms)?;
+            match binary.permissions {
+                0o755 => PlatformAccess::Executable,
+                0o700 => PlatformAccess::PrivateDir,
+                0o444 => PlatformAccess::ReadOnly,
+                0o600 => PlatformAccess::SecretFile,
+                0o770 => PlatformAccess::SocketDir,
+                mode => PlatformAccess::Custom(mode),
             }
+            .apply(&dest_path)?;
         }
 
         info!("✅ Binaries installed");
@@ -259,12 +263,7 @@ impl InitramfsBuilder {
         writeln!(file, "exec /init \"$@\"")?;
 
         // Set executable
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let perms = fs::Permissions::from_mode(0o755);
-            fs::set_permissions(&init_path, perms)?;
-        }
+        PlatformAccess::Executable.apply(&init_path)?;
 
         info!("✅ Init script created");
         Ok(())

@@ -203,17 +203,8 @@ pub async fn download_url_to_path_with_verify(
 
 /// chmod +x on Unix; no-op on other platforms.
 fn set_executable_unix(path: &Path) -> Result<()> {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = std::fs::metadata(path)?.permissions();
-        perms.set_mode(0o755);
-        std::fs::set_permissions(path, perms)?;
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = path;
-    }
+    use biomeos_types::platform_substrate::PlatformAccess;
+    PlatformAccess::Executable.apply(path)?;
     Ok(())
 }
 

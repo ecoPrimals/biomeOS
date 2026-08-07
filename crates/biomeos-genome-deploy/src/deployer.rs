@@ -10,8 +10,6 @@ use flate2::read::GzDecoder;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::fs::{self, File};
 use std::io::Read;
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use tar::Archive;
 
@@ -158,13 +156,8 @@ impl GenomeDeployer {
             let dest = install_dir.join(entry.file_name());
             fs::copy(entry.path(), &dest)?;
 
-            // Make executable on Unix
-            #[cfg(unix)]
-            {
-                let mut perms = fs::metadata(&dest)?.permissions();
-                perms.set_mode(0o755);
-                fs::set_permissions(&dest, perms)?;
-            }
+            // Make executable
+            biomeos_types::platform_substrate::PlatformAccess::Executable.apply(&dest)?;
 
             pb.set_message(format!(
                 "Installed: {}",

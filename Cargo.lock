@@ -410,6 +410,7 @@ name = "biomeos-chimera"
 version = "4.57.0"
 dependencies = [
  "anyhow",
+ "biomeos-types",
  "dashmap",
  "serde",
  "serde-saphyr",

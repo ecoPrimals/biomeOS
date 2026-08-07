@@ -24,6 +24,9 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 dashmap = { workspace = true }
 
+# Ecosystem types
+biomeos-types = { path = "../biomeos-types" }
+
 [dev-dependencies]
 tokio-test = { workspace = true }
 tempfile = { workspace = true }

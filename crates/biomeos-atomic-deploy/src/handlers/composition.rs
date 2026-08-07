@@ -415,7 +415,12 @@ impl LifecycleHandler {
     /// Returns:
     /// - `{ validated: true, version, ... }` on success
     /// - `{ validated: false, reason, ... }` on failure
-    pub async fn composition_test_swap(&self, params: &Option<Value>) -> Result<Value> {
+    pub async fn composition_test_swap(
+        &self,
+        params: &Option<Value>,
+        neural_api_socket: &std::path::Path,
+        family_id: &str,
+    ) -> Result<Value> {
         let params = params
             .as_ref()
             .context("Missing parameters for composition.test_swap")?;
@@ -453,6 +458,11 @@ impl LifecycleHandler {
             .arg("--socket")
             .arg(&test_socket)
             .env("BIOMEOS_TEST_SWAP", "1")
+            .env(
+                biomeos_types::env_config::vars::NEURAL_API_SOCKET,
+                neural_api_socket.to_string_lossy().as_ref(),
+            )
+            .env(biomeos_types::env_config::vars::FAMILY_ID, family_id)
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .stdin(std::process::Stdio::null());

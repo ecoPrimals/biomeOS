@@ -9,6 +9,8 @@ use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
 
+use biomeos_types::platform_substrate::PlatformAccess;
+
 use crate::manifest::{BinaryManifest, SporeManifest};
 use crate::verification::{SporeVerifier, VerificationStatus};
 
@@ -163,14 +165,7 @@ impl SporeRefresher {
         // Write to destination
         std::fs::write(dest, &source_bytes)?;
 
-        // Set executable permissions on Unix
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(dest)?.permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(dest, perms)?;
-        }
+        PlatformAccess::Executable.apply(dest)?;
 
         info!(
             "Copied and verified: {} → {}",

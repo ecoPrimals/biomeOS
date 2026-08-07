@@ -13,6 +13,7 @@
 
 use crate::{Arch, GenomeBin};
 use anyhow::{Context, Result};
+use biomeos_types::platform_substrate::PlatformAccess;
 use bytes::Bytes;
 use std::collections::HashMap;
 use std::fs::File;
@@ -183,14 +184,7 @@ impl GenomeBin {
         tracing::info!("   Payload: {}KB", (total_size - payload_offset) / 1024);
         tracing::info!("   Total: {}KB", total_size / 1024);
 
-        // Make executable on Unix (capability-based)
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = file.metadata()?.permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(output, perms)?;
-        }
+        PlatformAccess::Executable.apply(output)?;
 
         Ok(())
     }

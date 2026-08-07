@@ -7,6 +7,7 @@
 //! Adds metrics collection and rollback capabilities
 
 use anyhow::{Context, Result};
+use biomeos_types::platform_substrate::PlatformAccess;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
@@ -235,13 +236,7 @@ impl NeuralSpore {
                     .context(format!("Failed to copy {}", filename.to_string_lossy()))?;
 
                 // Make executable
-                #[cfg(unix)]
-                {
-                    use std::os::unix::fs::PermissionsExt;
-                    let mut perms = tokio::fs::metadata(&dest).await?.permissions();
-                    perms.set_mode(0o755);
-                    tokio::fs::set_permissions(&dest, perms).await?;
-                }
+                PlatformAccess::Executable.apply(&dest)?;
 
                 info!("   Installed: {}", filename.to_string_lossy());
                 copied += 1;
@@ -262,13 +257,7 @@ impl NeuralSpore {
             .context("Failed to copy nucleus binary")?;
 
         // Make executable
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = tokio::fs::metadata(&dest).await?.permissions();
-            perms.set_mode(0o755);
-            tokio::fs::set_permissions(&dest, perms).await?;
-        }
+        PlatformAccess::Executable.apply(&dest)?;
 
         info!("✅ Nucleus orchestrator installed");
         Ok(())

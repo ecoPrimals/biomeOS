@@ -28,10 +28,9 @@ const DEFAULT_SOCKET_GROUP: &str = "membrane";
 /// for single-user deployments where the calling user owns the process.
 #[cfg(unix)]
 pub fn apply_socket_ownership(path: &Path) {
-    use std::os::unix::fs::PermissionsExt;
+    use biomeos_types::platform_substrate::PlatformAccess;
 
-    let perms = std::fs::Permissions::from_mode(0o660);
-    if let Err(e) = std::fs::set_permissions(path, perms) {
+    if let Err(e) = PlatformAccess::Custom(0o660).apply(path) {
         tracing::warn!(
             "Failed to set socket permissions on {}: {e}",
             path.display()
@@ -47,10 +46,9 @@ pub fn apply_socket_ownership(path: &Path) {
 /// to the `MEMBRANE_SOCKET_GROUP` (default: `membrane`).
 #[cfg(unix)]
 pub fn apply_dir_ownership(path: &Path) {
-    use std::os::unix::fs::PermissionsExt;
+    use biomeos_types::platform_substrate::PlatformAccess;
 
-    let perms = std::fs::Permissions::from_mode(0o770);
-    if let Err(e) = std::fs::set_permissions(path, perms) {
+    if let Err(e) = PlatformAccess::SocketDir.apply(path) {
         tracing::debug!("Failed to set dir permissions on {}: {e}", path.display());
     }
 

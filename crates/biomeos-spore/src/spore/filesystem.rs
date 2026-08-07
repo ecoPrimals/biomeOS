@@ -12,6 +12,8 @@ use std::path::PathBuf;
 use tokio::fs as async_fs;
 use tracing::{debug, info};
 
+use biomeos_types::platform_substrate::PlatformAccess;
+
 use super::core::Spore;
 use crate::error::{SporeError, SporeResult};
 
@@ -46,15 +48,9 @@ impl FilesystemOps for Spore {
         }
 
         // Set secure permissions on secrets directory
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let secrets = self.root_path.join("secrets");
-            let mut perms = async_fs::metadata(&secrets).await?.permissions();
-            perms.set_mode(0o700);
-            async_fs::set_permissions(&secrets, perms).await?;
-            debug!("Set permissions to 0700 for secrets/");
-        }
+        let secrets = self.root_path.join("secrets");
+        PlatformAccess::PrivateDir.apply(&secrets)?;
+        debug!("Set permissions to 0700 for secrets/");
 
         Ok(())
     }
@@ -101,13 +97,7 @@ impl FilesystemOps for Spore {
             async_fs::copy(&tower_src, &tower_dst).await?;
             info!("✅ Copied tower orchestrator from plasmidBin/tower/");
 
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                let mut perms = async_fs::metadata(&tower_dst).await?.permissions();
-                perms.set_mode(0o755);
-                async_fs::set_permissions(&tower_dst, perms).await?;
-            }
+            PlatformAccess::Executable.apply(&tower_dst)?;
         } else {
             return Err(SporeError::BinaryNotFound(format!(
                 "tower orchestrator not found at: {}",
@@ -156,13 +146,7 @@ impl FilesystemOps for Spore {
 
                 info!("✅ Copied primal: {}", file_name.to_string_lossy());
 
-                #[cfg(unix)]
-                {
-                    use std::os::unix::fs::PermissionsExt;
-                    let mut perms = async_fs::metadata(&dst_path).await?.permissions();
-                    perms.set_mode(0o755);
-                    async_fs::set_permissions(&dst_path, perms).await?;
-                }
+                PlatformAccess::Executable.apply(&dst_path)?;
             }
         }
 

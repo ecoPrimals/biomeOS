@@ -509,13 +509,8 @@ pub fn execute(args: GenomeArgs) -> Result<()> {
                     format!("Failed to write binary to {}", output_path.display())
                 })?;
 
-                #[cfg(unix)]
-                {
-                    use std::os::unix::fs::PermissionsExt;
-                    let mut perms = fs::metadata(&output_path)?.permissions();
-                    perms.set_mode(0o755);
-                    fs::set_permissions(&output_path, perms)?;
-                }
+                biomeos_types::platform_substrate::PlatformAccess::Executable
+                    .apply(&output_path)?;
 
                 println!(
                     "✅ Extracted {} binary: {}",

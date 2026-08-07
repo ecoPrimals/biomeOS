@@ -45,6 +45,8 @@ mod network_config_tests;
 pub mod or_exit;
 /// XDG-compliant system paths
 pub mod paths;
+/// G68 Platform Substrate Abstraction (cross-platform permissions)
+pub mod platform_substrate;
 pub mod primal;
 /// Primal-specific capability routing types (relay, compute, model, lifecycle)
 pub mod primal_capabilities;

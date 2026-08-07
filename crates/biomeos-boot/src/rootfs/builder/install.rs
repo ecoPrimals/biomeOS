@@ -2,6 +2,7 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 use anyhow::{Context, Result};
+use biomeos_types::platform_substrate::PlatformAccess;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use tracing::{info, warn};
@@ -49,13 +50,7 @@ impl RootFsBuilder {
         let dest = root.join("bin/busybox");
         std::fs::copy(&busybox_path, &dest).context("Failed to copy busybox")?;
 
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(&dest)?.permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(&dest, perms)?;
-        }
+        PlatformAccess::Executable.apply(&dest)?;
 
         info!("  ✓ BusyBox installed");
         Ok(())
@@ -89,13 +84,7 @@ impl RootFsBuilder {
         let dest = root.join("sbin/init");
         std::fs::copy(&init_binary, &dest).context("Failed to copy biomeos-init")?;
 
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = std::fs::metadata(&dest)?.permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(&dest, perms)?;
-        }
+        PlatformAccess::Executable.apply(&dest)?;
 
         Ok(())
     }
@@ -128,13 +117,7 @@ impl RootFsBuilder {
                         format!("Failed to copy primal {}", filename.to_string_lossy())
                     })?;
 
-                    #[cfg(unix)]
-                    {
-                        use std::os::unix::fs::PermissionsExt;
-                        let mut perms = std::fs::metadata(&dest)?.permissions();
-                        perms.set_mode(0o755);
-                        std::fs::set_permissions(&dest, perms)?;
-                    }
+                    PlatformAccess::Executable.apply(&dest)?;
 
                     info!("  ✓ Installed {}", filename.to_string_lossy());
                     count += 1;

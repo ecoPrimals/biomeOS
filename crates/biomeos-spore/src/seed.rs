@@ -35,6 +35,8 @@ use std::path::{Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
+use biomeos_types::platform_substrate::PlatformAccess;
+
 use crate::error::{SporeError, SporeResult};
 use tracing::{debug, info};
 
@@ -83,8 +85,6 @@ impl FamilySeed {
         fs::write(&path, bytes)?;
         info!("Wrote genesis seed to file: {}", path.display());
 
-        // Set secure permissions on Unix
-        #[cfg(unix)]
         Self::set_secure_permissions(&path)?;
 
         Ok(Self { file_path: path })
@@ -151,8 +151,6 @@ impl FamilySeed {
         fs::write(&target_path, child_seed)?;
         info!("Wrote sibling seed to file: {}", target_path.display());
 
-        // Set secure permissions on Unix
-        #[cfg(unix)]
         Self::set_secure_permissions(&target_path)?;
 
         Ok(Self {
@@ -247,17 +245,12 @@ impl FamilySeed {
         Ok(("FAMILY_SEED_FILE".to_string(), path_str))
     }
 
-    /// Set secure permissions on the seed file (Unix only)
+    /// Set secure permissions on the seed file
     ///
     /// Sets permissions to 0600 (owner read/write only) to prevent
     /// unauthorized access to the seed material.
-    #[cfg(unix)]
     fn set_secure_permissions(path: &Path) -> SporeResult<()> {
-        use std::os::unix::fs::PermissionsExt;
-
-        let mut perms = fs::metadata(path)?.permissions();
-        perms.set_mode(0o600);
-        fs::set_permissions(path, perms)?;
+        PlatformAccess::SecretFile.apply(path)?;
 
         debug!("Set permissions to 0600 for: {}", path.display());
         Ok(())

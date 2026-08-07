@@ -11,6 +11,7 @@
 use tokio::fs as async_fs;
 use tracing::info;
 
+use biomeos_types::platform_substrate::PlatformAccess;
 use biomeos_types::primal_names;
 
 use super::core::Spore;
@@ -131,13 +132,7 @@ fi
         async_fs::write(&script_path, script).await?;
 
         // Make executable (will work on ext4, not on FAT32, but deploy.sh handles this)
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = async_fs::metadata(&script_path).await?.permissions();
-            perms.set_mode(0o755);
-            async_fs::set_permissions(&script_path, perms).await?;
-        }
+        PlatformAccess::Executable.apply(&script_path)?;
 
         info!("✅ Created deploy.sh (self-bootable, FAT32-aware)");
         Ok(())

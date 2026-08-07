@@ -41,6 +41,8 @@ use tracing::{debug, info};
 
 use chrono::Utc;
 
+use biomeos_types::platform_substrate::PlatformAccess;
+
 use crate::error::SporeResult;
 use crate::seed::FamilySeed;
 use crate::spore_log_tracker::SporeLogTracker;
@@ -273,14 +275,8 @@ impl SporeIncubator {
         let seed_path = config_path.join(".deployed.seed");
         fs::write(&seed_path, deployed_seed).await?;
 
-        // Set secure permissions (Unix only)
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = fs::metadata(&seed_path).await?.permissions();
-            perms.set_mode(0o600); // Read/write for owner only
-            fs::set_permissions(&seed_path, perms).await?;
-        }
+        // Read/write for owner only
+        PlatformAccess::SecretFile.apply(&seed_path)?;
 
         debug!("Stored deployed seed securely");
         Ok(())
