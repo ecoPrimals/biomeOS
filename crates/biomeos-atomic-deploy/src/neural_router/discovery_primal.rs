@@ -39,19 +39,45 @@ impl NeuralRouter {
         }
 
         let mut nucleation = SocketNucleation::default();
-        let socket_path = nucleation.assign_socket_with_runtime_dir(
+        let family_suffixed = nucleation.assign_socket_with_runtime_dir(
             primal_name,
             &self.family_id,
             xdg_runtime_parent,
         );
 
-        if !socket_path.exists() {
-            return Err(anyhow!(
-                "Primal '{}' not found: socket {} does not exist",
-                primal_name,
-                socket_path.display()
-            ));
-        }
+        // Try family-suffixed path first, then unsuffixed, then full resolve_primal_socket
+        let socket_path = if family_suffixed.exists() {
+            family_suffixed
+        } else {
+            let unsuffixed = family_suffixed
+                .parent()
+                .map(|dir| dir.join(format!("{primal_name}.sock")))
+                .unwrap_or_else(|| std::path::PathBuf::from(format!("{primal_name}.sock")));
+            if unsuffixed.exists() {
+                debug!(
+                    "   📍 {} found at unsuffixed path: {}",
+                    primal_name,
+                    unsuffixed.display()
+                );
+                unsuffixed
+            } else {
+                let resolved =
+                    std::path::PathBuf::from(crate::capability_translation::resolve_primal_socket(
+                        primal_name,
+                        &self.family_id,
+                    ));
+                if resolved.exists() {
+                    resolved
+                } else {
+                    return Err(anyhow!(
+                        "Primal '{}' not found: tried {} and {}",
+                        primal_name,
+                        family_suffixed.display(),
+                        unsuffixed.display(),
+                    ));
+                }
+            }
+        };
 
         let endpoint = TransportEndpoint::UnixSocket {
             path: socket_path.clone(),
@@ -79,6 +105,95 @@ impl NeuralRouter {
         );
 
         Ok(primal)
+    }
+
+    /// Refresh a stale endpoint for a primal by re-scanning the socket directory.
+    ///
+    /// Called after a forward failure to a graph-bootstrap registered endpoint.
+    /// If the primal's actual socket is at a different path than what the registry
+    /// recorded (e.g., unsuffixed vs family-suffixed), this finds and updates it.
+    ///
+    /// Returns `Some(new_endpoint)` if a live socket was found, `None` otherwise.
+    pub(crate) async fn refresh_stale_endpoint(
+        &self,
+        primal_name: &str,
+    ) -> Option<TransportEndpoint> {
+        let socket_dirs = crate::handlers::TopologyHandler::get_socket_directories();
+
+        for dir in &socket_dirs {
+            let entries = match std::fs::read_dir(dir) {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let filename = match path.file_name().and_then(|f| f.to_str()) {
+                    Some(f) => f,
+                    None => continue,
+                };
+
+                if !filename.ends_with(".sock") {
+                    continue;
+                }
+
+                let stem = match filename.strip_suffix(".sock") {
+                    Some(s) => s,
+                    None => continue,
+                };
+
+                // Match: exact primal name or primal-{anything} prefix
+                let is_match = stem == primal_name
+                    || stem.starts_with(&format!("{primal_name}-"))
+                    || stem.starts_with(&format!("{primal_name}."));
+
+                if !is_match {
+                    continue;
+                }
+
+                let endpoint = TransportEndpoint::UnixSocket { path: path.clone() };
+                if Self::check_endpoint_health(&endpoint).await {
+                    debug!(
+                        "   🔄 Refreshed stale endpoint for {}: {}",
+                        primal_name,
+                        path.display()
+                    );
+
+                    // Update discovery cache
+                    {
+                        let mut cache = self.discovered_primals.write().await;
+                        if let Some(cached) = cache.get_mut(primal_name) {
+                            cached.endpoint = endpoint.clone();
+                            cached.healthy = true;
+                            cached.last_check = chrono::Utc::now();
+                        }
+                    }
+
+                    // Update capability registry
+                    let registry = self.capability_registry.read().await;
+                    let caps_to_update: Vec<String> = registry
+                        .iter()
+                        .filter(|(_cap, providers)| {
+                            providers
+                                .iter()
+                                .any(|p| p.primal_name.as_ref() == primal_name)
+                        })
+                        .map(|(cap, _)| cap.clone())
+                        .collect();
+                    drop(registry);
+
+                    for cap in caps_to_update {
+                        let _ = self
+                            .register_capability_unix(&cap, primal_name, &path, "endpoint-refresh")
+                            .await;
+                    }
+
+                    return Some(endpoint);
+                }
+            }
+        }
+
+        None
     }
 
     /// Transport-aware health check via `AtomicClient`

@@ -92,6 +92,32 @@ impl CapabilityHandler {
             .forward_request_with_timeout(&endpoint, &forward_method, &ctx.args, ctx.timeout_cap)
             .await;
 
+        // Self-healing: if forward failed, the endpoint may be stale (e.g., graph-bootstrap
+        // registered {primal}-{family}.sock but the primal bound to {primal}.sock).
+        // Attempt a targeted endpoint refresh and retry once.
+        let result = match result {
+            Err(ref _e) => {
+                if let Some(refreshed) = self.router.refresh_stale_endpoint(&primary_name).await {
+                    debug!(
+                        "   🔄 Retrying {} via refreshed endpoint: {}",
+                        semantic_name,
+                        refreshed.display_string()
+                    );
+                    self.router
+                        .forward_request_with_timeout(
+                            &refreshed,
+                            &forward_method,
+                            &ctx.args,
+                            ctx.timeout_cap,
+                        )
+                        .await
+                } else {
+                    result
+                }
+            }
+            ok => ok,
+        };
+
         let elapsed_ms = elapsed_ms_since(start);
 
         // Layer 4: record dispatch outcome for adaptive routing weights

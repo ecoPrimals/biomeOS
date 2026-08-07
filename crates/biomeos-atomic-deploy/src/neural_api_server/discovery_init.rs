@@ -273,11 +273,6 @@ impl NeuralApiServer {
         let mut total_caps = 0usize;
         let mut total_nodes = 0usize;
 
-        let socket_dirs = crate::handlers::TopologyHandler::get_socket_directories();
-        let base_dir = socket_dirs.first().cloned().unwrap_or_else(|| {
-            std::path::PathBuf::from(biomeos_types::defaults::DEFAULT_SOCKET_DIR)
-        });
-
         let graph_dirs = [&self.graphs_dir];
         for dir in &graph_dirs {
             let entries = match std::fs::read_dir(dir) {
@@ -312,8 +307,12 @@ impl NeuralApiServer {
                         continue;
                     }
 
-                    let socket_path =
-                        base_dir.join(format!("{}-{}.sock", primal_name, self.family_id));
+                    let socket_path = std::path::PathBuf::from(
+                        crate::capability_translation::resolve_primal_socket(
+                            &primal_name,
+                            &self.family_id,
+                        ),
+                    );
 
                     let mut registered = 0usize;
 
