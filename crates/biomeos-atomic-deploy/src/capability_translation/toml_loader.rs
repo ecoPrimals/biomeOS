@@ -100,6 +100,21 @@ pub fn load_from_registry_toml(
         .map(|(name, entry)| (name.as_str(), entry.ribocipher))
         .collect();
 
+    // Persist domain-level ribocipher flags into the registry for capability.call routing
+    for (domain_name, requires) in &domain_ribocipher {
+        if *requires {
+            registry.set_domain_ribocipher(domain_name, true);
+        }
+    }
+    // Also register capabilities listed under ribocipher-requiring domains
+    for (_domain_name, domain_entry) in &parsed.domains {
+        if domain_entry.ribocipher {
+            for cap in &domain_entry.capabilities {
+                registry.set_domain_ribocipher(cap, true);
+            }
+        }
+    }
+
     for (domain, entries) in &parsed.translations {
         let domain_requires_ribocipher = domain_ribocipher
             .get(domain.as_str())

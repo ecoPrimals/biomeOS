@@ -25,6 +25,12 @@ impl CapabilityHandler {
             semantic_name
         );
 
+        // Check domain-level ribocipher requirement for the target capability
+        let use_ribocipher = {
+            let registry = self.translation_registry.read().await;
+            registry.domain_requires_ribocipher(&ctx.capability)
+        };
+
         match self.router.discover_capability(&ctx.capability).await {
             Ok(atomic) => {
                 let forward_method = ctx.operation.clone();
@@ -37,15 +43,25 @@ impl CapabilityHandler {
                     .map(|p| p.name.to_string())
                     .unwrap_or_else(|| "unknown".to_string());
 
-                let result = self
-                    .router
-                    .forward_request_with_timeout(
-                        &atomic.primary_endpoint,
-                        &forward_method,
-                        &ctx.args,
-                        ctx.timeout_cap,
-                    )
-                    .await;
+                let result = if use_ribocipher {
+                    self.router
+                        .forward_request_ribocipher(
+                            &atomic.primary_endpoint,
+                            &forward_method,
+                            &ctx.args,
+                            ctx.timeout_cap,
+                        )
+                        .await
+                } else {
+                    self.router
+                        .forward_request_with_timeout(
+                            &atomic.primary_endpoint,
+                            &forward_method,
+                            &ctx.args,
+                            ctx.timeout_cap,
+                        )
+                        .await
+                };
 
                 let elapsed_ms = elapsed_ms_since(start);
 

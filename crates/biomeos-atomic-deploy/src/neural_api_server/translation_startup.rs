@@ -16,10 +16,10 @@ pub(crate) const BUNDLED_BOOTSTRAP_GRAPH: &str =
 impl NeuralApiServer {
     /// Load translations from Tower Atomic graph on startup
     pub(crate) async fn load_translations_on_startup(&self) -> Result<()> {
-        // 1. Load hardcoded default translations (always available)
+        // 1. Load capability translations (TOML-first with ribocipher flags, then compiled fallback)
         {
             let mut registry = self.translation_registry.write().await;
-            let default_count = registry.load_defaults_for_family(&self.family_id);
+            let default_count = registry.load_defaults(&self.family_id);
             info!(
                 "📚 Loaded {} default capability translations (family: {})",
                 default_count, self.family_id

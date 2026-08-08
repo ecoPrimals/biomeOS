@@ -78,6 +78,7 @@ pub struct CapabilityTranslation {
 pub struct CapabilityTranslationRegistry {
     translations: HashMap<String, CapabilityTranslation>,
     provider_capabilities: HashMap<String, Vec<String>>,
+    domain_ribocipher: HashMap<String, bool>,
     _next_id: std::sync::Arc<std::sync::atomic::AtomicU64>,
 }
 
@@ -88,6 +89,7 @@ impl CapabilityTranslationRegistry {
         Self {
             translations: HashMap::new(),
             provider_capabilities: HashMap::new(),
+            domain_ribocipher: HashMap::new(),
             _next_id: std::sync::Arc::new(std::sync::atomic::AtomicU64::new(1)),
         }
     }
@@ -160,6 +162,17 @@ impl CapabilityTranslationRegistry {
     #[must_use]
     pub fn get_translation(&self, semantic: &str) -> Option<&CapabilityTranslation> {
         self.translations.get(semantic)
+    }
+
+    /// Check if a domain/capability requires riboCipher transport framing.
+    #[must_use]
+    pub fn domain_requires_ribocipher(&self, domain: &str) -> bool {
+        self.domain_ribocipher.get(domain).copied().unwrap_or(false)
+    }
+
+    /// Register a domain-level riboCipher requirement.
+    pub fn set_domain_ribocipher(&mut self, domain: &str, requires: bool) {
+        self.domain_ribocipher.insert(domain.to_string(), requires);
     }
 
     /// Check if capability is available
