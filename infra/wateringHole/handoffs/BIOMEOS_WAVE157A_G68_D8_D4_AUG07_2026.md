@@ -1,6 +1,6 @@
 # biomeOS Wave 157a — G68 + D8 + D4 Handoff
 
-**Date**: Aug 7–8, 2026 6:30PM→8:00AM | **Commits**: `b13d308b`, `03355e81`, `d721b959`, `1dc67ae0`, `6f60cccf`, `44c40191` | **From**: biomeOS Code Team on eastGate
+**Date**: Aug 7–8, 2026 6:30PM→5:55PM | **Commits**: `b13d308b`, `03355e81`, `d721b959`, `1dc67ae0`, `6f60cccf`, `44c40191`, `1ff5859c` | **From**: biomeOS Code Team on eastGate
 
 ---
 
@@ -201,4 +201,28 @@ Translation registry is an in-memory hashmap lookup (zero network I/O). Known ca
 
 ---
 
-*biomeOS Code Team — Wave 157a. **G68 FULLY COMPLIANT**. D8 CLOSED. D4 CLOSED. Routing gaps 1+7 CLOSED. Dispatch timeout FIXED.*
+## ADDENDUM: `1ff5859c` — riboCipher Auto-Detect Dispatch (Aug 8, 5:55PM)
+
+### Problem
+
+The riboCipher dual-lane connection pool was built (`send_ribocipher_jsonrpc()`, `forward_request_ribocipher()`), but the dispatch path didn't know which providers require it. sweetGrass and rhizoCrypt enforce `[0xEC, 0x01]` prefix — they reject plain JSON-RPC connections. Result: all `provenance.*`, `braid.*`, and `dag.*` calls failed with connection rejected.
+
+### Solution — Domain-Level riboCipher Inheritance
+
+1. **`CapabilityTranslation`**: added `ribocipher: bool` field
+2. **TOML config** (`capability_registry.toml`): added `ribocipher = true` to:
+   - `[domains.attribution]` (sweetGrass) — all `provenance.*`, `braid.*` routes
+   - `[domains.ephemeral_workspace]` (rhizoCrypt) — all `dag.*` routes
+3. **TOML loader**: reads domain-level `ribocipher` flag, inherits into all translations under that domain (entry-level override also supported)
+4. **Dispatch** (`translation.rs`): checks `trans.ribocipher` → uses `forward_request_ribocipher()` for both initial forward and self-healing retry paths
+
+### Impact
+
+- All provenance/braid/dag calls now auto-use riboCipher framing
+- No more connection rejections from G68-enforcing primals
+- westGate inline braiding (990,500 files) can now route through biomeOS Neural API without bypass
+- N2-N5 verification unblocked for riboCipher-enforcing providers
+
+---
+
+*biomeOS Code Team — Wave 157a. **G68 FULLY COMPLIANT**. D8 CLOSED. D4 CLOSED. Routing gaps CLOSED. Dispatch timeout FIXED. riboCipher auto-detect WIRED.*
