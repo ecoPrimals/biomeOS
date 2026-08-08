@@ -77,10 +77,25 @@ impl CapabilityHandler {
 
         let semantic_name = format!("{}.{}", ctx.capability, ctx.operation);
 
-        // Tower Atomic relay: prefer routing through Songbird when available.
-        // Songbird handles BTSP handshake, correct socket resolution, and method
-        // translation — resolving composition gaps from primalSpring benchScale
-        // validation (BTSP rejection, socket path mismatch, method prefix).
+        // Direct routing (fast path): look up translation registry FIRST.
+        // This avoids the Tower Atomic relay timeout for domain-specific
+        // capabilities (provenance, braid, compute, etc.) that have a known
+        // provider in the registry.
+        let registry = self.translation_registry.read().await;
+        let translation = registry.get_translation(&semantic_name);
+
+        if let Some(trans) = translation {
+            let trans = trans.clone();
+            drop(registry);
+            return self
+                .dispatch_with_translation(ctx, start, &semantic_name, trans)
+                .await;
+        }
+        drop(registry);
+
+        // Tower Atomic relay: fallback for capabilities not in the translation
+        // registry. Songbird handles BTSP handshake, socket resolution, and
+        // method translation for composite cross-primal operations.
         if let Ok(tower) = self.router.discover_tower_atomic().await {
             match self
                 .router
@@ -136,22 +151,8 @@ impl CapabilityHandler {
             }
         }
 
-        // Direct routing fallback: look up translation
-        let registry = self.translation_registry.read().await;
-        let translation = registry.get_translation(&semantic_name);
-
-        match translation {
-            Some(trans) => {
-                let trans = trans.clone();
-                drop(registry);
-                self.dispatch_with_translation(ctx, start, &semantic_name, trans)
-                    .await
-            }
-            None => {
-                drop(registry);
-                self.dispatch_without_translation(ctx, start, &semantic_name)
-                    .await
-            }
-        }
+        // Final fallback: direct routing without translation (discovers by capability name)
+        self.dispatch_without_translation(ctx, start, &semantic_name)
+            .await
     }
 }
