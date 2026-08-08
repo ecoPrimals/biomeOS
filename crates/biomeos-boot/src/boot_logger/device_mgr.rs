@@ -99,19 +99,15 @@ impl DeviceManager {
 mod tests {
     use super::*;
     use crate::init_error::BootError;
-    use rustix::fs::makedev;
     use std::path::{Path, PathBuf};
 
     #[test]
     fn test_device_manager_safe() {
-        // Test that DeviceManager can be constructed
-        // (actual device creation requires root, so just test structure)
         let _ = DeviceManager;
     }
 
     #[test]
     fn test_device_paths() {
-        // Verify device paths are correct
         assert_eq!("/dev/ttyS0".len(), 10);
         assert_eq!("/dev/tty0".len(), 9);
     }
@@ -132,25 +128,28 @@ mod tests {
         assert!(target.starts_with("/dev"));
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn test_makedev_major_minor() {
-        // Verify makedev produces valid dev_t for ttyS0 (major 4, minor 64)
+        use rustix::fs::makedev;
         let dev = makedev(4, 64);
         assert_eq!(rustix::fs::major(dev), 4);
         assert_eq!(rustix::fs::minor(dev), 64);
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn test_makedev_tty0() {
-        // tty0: major 4, minor 0
+        use rustix::fs::makedev;
         let dev = makedev(4, 0);
         assert_eq!(rustix::fs::major(dev), 4);
         assert_eq!(rustix::fs::minor(dev), 0);
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn test_mode_bits() {
-        // 0660 = rw-rw----
+        use rustix::fs::Mode;
         let mode = Mode::from_bits_truncate(0o660);
         assert_eq!(mode.bits() & 0o777, 0o660);
     }

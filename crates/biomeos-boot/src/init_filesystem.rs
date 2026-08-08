@@ -189,9 +189,7 @@ mod tests {
         let tmp = tempfile::tempdir().expect("tempdir");
         let target = tmp.path().join("already-tracked");
         mgr.mounted.insert(target.clone());
-        let r = mgr
-            .mount_if_needed(&target, "proc", "proc", MountFlags::empty())
-            .await;
+        let r = mgr.mount_if_needed(&target, "proc", "proc", 0).await;
         assert!(r.is_ok());
         assert!(mgr.is_mounted(&target));
     }
@@ -203,9 +201,7 @@ mod tests {
         let file_path = tmp.path().join("not_a_directory");
         std::fs::write(&file_path, b"x").expect("write file");
         let nested = file_path.join("mountpoint");
-        let r = mgr
-            .mount_if_needed(&nested, "proc", "proc", MountFlags::empty())
-            .await;
+        let r = mgr.mount_if_needed(&nested, "proc", "proc", 0).await;
         assert!(
             matches!(r, Err(BootError::DirectoryCreation { .. })),
             "expected DirectoryCreation, got {r:?}"
@@ -219,12 +215,7 @@ mod tests {
         let tmp = tempfile::tempdir().expect("tempdir");
         let target = tmp.path().join("mnt-invalid-fstype");
         let r = mgr
-            .mount_if_needed(
-                &target,
-                "none",
-                "biomeos_test_not_a_fstype_xyz",
-                MountFlags::empty(),
-            )
+            .mount_if_needed(&target, "none", "biomeos_test_not_a_fstype_xyz", 0)
             .await;
         assert!(
             matches!(r, Err(BootError::MountFailed { .. })),

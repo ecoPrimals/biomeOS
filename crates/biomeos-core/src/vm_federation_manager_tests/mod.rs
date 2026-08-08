@@ -7,7 +7,6 @@
 #![expect(clippy::unwrap_used, clippy::expect_used, reason = "test assertions")]
 
 use std::io::Write;
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -108,11 +107,9 @@ impl MockHarness {
         file.write_all(body.as_bytes()).expect("write mock binary");
         file.sync_all().expect("sync mock binary");
         drop(file);
-        let mut perms = std::fs::metadata(&path)
-            .expect("mock binary metadata")
-            .permissions();
-        perms.set_mode(0o755);
-        std::fs::set_permissions(&path, perms).expect("chmod mock binary");
+        biomeos_types::platform_substrate::PlatformAccess::Executable
+            .apply(&path)
+            .expect("chmod mock binary");
     }
 
     pub(super) fn path_env(&self) -> String {
