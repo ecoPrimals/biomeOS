@@ -1,6 +1,6 @@
 # biomeOS Wave 157a — G68 + D8 + D4 Handoff
 
-**Date**: Aug 7, 2026 6:30PM | **Commit**: `b13d308b` | **From**: biomeOS Code Team on eastGate
+**Date**: Aug 7, 2026 6:30PM→9:00PM | **Commits**: `b13d308b`, `03355e81`, `d721b959` | **From**: biomeOS Code Team on eastGate
 
 ---
 
@@ -99,11 +99,32 @@ cargo clippy --all-targets          ✅ (no new warnings)
 
 | Metric | Before | After |
 |--------|--------|-------|
-| G68 L2 violations (biomeOS) | 14 | **0** |
+| G68 L1 violations (biomeOS) | 4 (raw symlinks) | **0** (platform_link) |
+| G68 L2 violations (biomeOS) | 14+3 | **0** (PlatformAccess + query_access) |
+| G68 L3 violations (biomeOS) | 2 (raw rustix) | **0** (platform-gated backends) |
 | Routable primals via Neural API | ~10 | **15** (all ecosystem primals) |
 | composition.test_swap env vars | 1 | **3** (BIOMEOS_TEST_SWAP, NEURAL_API_SOCKET, BIOMEOS_FAMILY_ID) |
 | Tests | 578 | 578 |
 
 ---
 
-*biomeOS Code Team — Wave 157a. G68 COMPLIANT. D8 CLOSED. D4 CLOSED.*
+## ADDENDUM: `d721b959` — biomeos-boot Platform Abstractions (9:00PM)
+
+### `platform_boot.rs` Module
+
+Created `crates/biomeos-boot/src/platform_boot.rs` with:
+
+| Function | Level | Replaces |
+|----------|-------|----------|
+| `platform_link(target, path)` | L1 | `std::os::unix::fs::symlink` |
+| `query_access(path) → u32` | L2 | `PermissionsExt::mode()` reads |
+| `is_executable(path) → bool` | L2 | `mode() & 0o111` checks |
+| `platform_mount(src, tgt, fs, flags)` | L3 | `rustix::mount::mount` |
+| `platform_mknod(path, major, minor)` | L3 | `rustix::fs::mknodat` |
+
+All raw `rustix` usage now consolidated into platform-gated backends.
+biomeOS production code has **zero** L1/L2/L3 violations per scanner v2.
+
+---
+
+*biomeOS Code Team — Wave 157a. G68 COMPLIANT (0 prod violations). D8 CLOSED. D4 CLOSED.*
