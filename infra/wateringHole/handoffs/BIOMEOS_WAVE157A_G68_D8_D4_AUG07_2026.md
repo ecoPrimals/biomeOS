@@ -225,4 +225,33 @@ The riboCipher dual-lane connection pool was built (`send_ribocipher_jsonrpc()`,
 
 ---
 
-*biomeOS Code Team — Wave 157a. **G68 FULLY COMPLIANT**. D8 CLOSED. D4 CLOSED. Routing gaps CLOSED. Dispatch timeout FIXED. riboCipher auto-detect WIRED.*
+## ADDENDUM: Depot Rebuild — `d6d1f83e` (Aug 8, 6:55PM)
+
+### Binary Rebuilt and Pushed to Golgi
+
+**Build**: `cargo build --release --target x86_64-unknown-linux-musl`
+**Commit at HEAD**: `d6d1f83e` (includes all fixes: `44c40191` + `6f60cccf` + `1ff5859c`)
+**Size**: 16MB stripped (was 17MB from Aug 7 02:26)
+**SHA256**: `b9b639c074fd5db9d8b710e3bacb630e8c599e0ea7c9f7362c25993c83c215fe`
+**Pushed to**: `golgi:/opt/ecoPrimals/depot/primals/x86_64-unknown-linux-musl/biomeos`
+**Local install**: `/home/eastgate/.local/bin/biomeos` (v4.57.0)
+
+### What's In This Binary (vs Jul 15 / Aug 7 depot)
+
+| Fix | Commit | Impact |
+|-----|--------|--------|
+| Dispatch reorder | `44c40191` | Translation before Tower relay → 15s→1.3ms |
+| Routing gaps | `6f60cccf` | braid.* routes, 30s→15s timeout, composition socket |
+| riboCipher auto-detect | `1ff5859c` | sweetGrass/rhizoCrypt auto-use riboCipher pool |
+| G68 final violations | `1dc67ae0` | vm_federation_manager_tests + boot rustix gated |
+| Platform boot abstractions | `d721b959` | platform_link, platform_mount, platform_mknod |
+
+### Next Steps
+
+1. **Gate teams**: pull from golgi depot, redeploy biomeos service
+2. **primalSpring**: re-run exp121 → should go 32/36→36/36
+3. **Cascade timer**: next auto-harvest picks up new binary from golgi
+
+---
+
+*biomeOS Code Team — Wave 157a. **G68 FULLY COMPLIANT**. D8 CLOSED. D4 CLOSED. Routing gaps CLOSED. Dispatch timeout FIXED. riboCipher auto-detect WIRED. **DEPOT REBUILD COMPLETE** (`d6d1f83e` on golgi).*
