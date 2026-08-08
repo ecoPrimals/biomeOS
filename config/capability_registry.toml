@@ -820,6 +820,7 @@ capabilities = [
     "provenance",
     "contribution",
     "privacy",
+    "anchoring",
 ]
 
 [translations.attribution]
@@ -843,6 +844,17 @@ capabilities = [
 "provenance.get_anchors" = { provider = "sweetgrass", method = "anchoring.get_anchors" }
 "provenance.health" = { provider = "sweetgrass", method = "health.check" }
 "provenance.sync_braid" = { provider = "sweetgrass", method = "braid.sync" }
+# Direct braid.* routes — callers can invoke braid methods without provenance. prefix
+"braid.create" = { provider = "sweetgrass", method = "braid.create" }
+"braid.get" = { provider = "sweetgrass", method = "braid.get" }
+"braid.get_by_hash" = { provider = "sweetgrass", method = "braid.get_by_hash" }
+"braid.list" = { provider = "sweetgrass", method = "braid.list" }
+"braid.query" = { provider = "sweetgrass", method = "braid.query" }
+"braid.delete" = { provider = "sweetgrass", method = "braid.delete" }
+"braid.commit" = { provider = "sweetgrass", method = "braid.commit" }
+"braid.batch_create" = { provider = "sweetgrass", method = "braid.batch_create" }
+"braid.batch_commit" = { provider = "sweetgrass", method = "braid.batch_commit" }
+"braid.sync" = { provider = "sweetgrass", method = "braid.sync" }
 
 # ------------------------------------------------------------------------------
 # Compute Dispatch Domain (ToadStool — Sub-Frame GPU Protocol)
@@ -1153,6 +1165,7 @@ capabilities = [
     "integration.compose",
     "composition",
     "composition.test_swap",
+    "convergence",
 ]
 
 [translations.integration]
@@ -1161,6 +1174,9 @@ capabilities = [
 "integration.health_matrix" = { provider = "primalspring", method = "integration.health_matrix" }
 "composition.test_swap" = { provider = "primalspring", method = "composition.test_swap" }
 "composition.validate" = { provider = "primalspring", method = "composition.validate" }
+# Convergence checks — primalSpring validates braid consistency across provenance trio
+"convergence.check" = { provider = "primalspring", method = "convergence.check" }
+"convergence.batch_check" = { provider = "primalspring", method = "convergence.batch_check" }
 
 # ------------------------------------------------------------------------------
 # Provenance Federation Domain (rootPulse)

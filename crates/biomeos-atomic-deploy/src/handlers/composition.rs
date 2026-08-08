@@ -443,10 +443,23 @@ impl LifecycleHandler {
             binary_path
         );
 
-        // Spawn candidate on a temporary socket
-        let temp_dir = std::env::temp_dir().join("biomeos-test-swap");
-        tokio::fs::create_dir_all(&temp_dir).await.ok();
-        let test_socket = temp_dir.join(format!("candidate-{}.sock", std::process::id()));
+        // Spawn candidate on a temporary socket in the membrane directory
+        // (avoids PrivateTmp restrictions on NUCLEUS systemd services)
+        let test_swap_dir = neural_api_socket
+            .parent()
+            .unwrap_or_else(|| std::path::Path::new("/tmp"))
+            .join("test-swap");
+        if let Err(e) = tokio::fs::create_dir_all(&test_swap_dir).await {
+            return Ok(json!({
+                "validated": false,
+                "reason": format!("Cannot create test-swap directory: {e}"),
+                "binary_path": binary_path,
+            }));
+        }
+        biomeos_types::platform_substrate::PlatformAccess::SocketDir
+            .apply(&test_swap_dir)
+            .ok();
+        let test_socket = test_swap_dir.join(format!("candidate-{}.sock", std::process::id()));
 
         // Clean up any leftover from previous run
         if test_socket.exists() {
