@@ -60,6 +60,10 @@ pub struct CapabilityTranslation {
     /// Provider socket path
     pub socket: String,
 
+    /// Whether the provider requires riboCipher transport framing (`[0xEC, 0x01]` prefix)
+    #[serde(default)]
+    pub ribocipher: bool,
+
     /// Parameter name mappings (semantic → actual)
     #[serde(default)]
     pub param_mappings: HashMap<String, String>,
@@ -97,21 +101,42 @@ impl CapabilityTranslationRegistry {
         socket: impl Into<String>,
         param_mappings: Option<HashMap<String, String>>,
     ) {
+        self.register_translation_full(
+            semantic,
+            provider,
+            actual_method,
+            socket,
+            param_mappings,
+            false,
+        );
+    }
+
+    /// Register a translation with explicit riboCipher flag.
+    pub fn register_translation_full(
+        &mut self,
+        semantic: impl Into<String>,
+        provider: impl Into<String>,
+        actual_method: impl Into<String>,
+        socket: impl Into<String>,
+        param_mappings: Option<HashMap<String, String>>,
+        ribocipher: bool,
+    ) {
         let semantic = semantic.into();
         let provider = provider.into();
         let actual_method = actual_method.into();
         let socket = socket.into();
 
         debug!(
-            "📝 Registering translation: {} → {} ({}) {}",
+            "📝 Registering translation: {} → {} ({}){}{}",
             semantic,
             actual_method,
             provider,
             if param_mappings.is_some() {
-                "with param mappings"
+                " with param mappings"
             } else {
                 ""
-            }
+            },
+            if ribocipher { " [riboCipher]" } else { "" }
         );
 
         let translation = CapabilityTranslation {
@@ -119,6 +144,7 @@ impl CapabilityTranslationRegistry {
             provider: provider.clone(),
             actual_method,
             socket,
+            ribocipher,
             param_mappings: param_mappings.unwrap_or_default(),
             metadata: HashMap::new(),
         };

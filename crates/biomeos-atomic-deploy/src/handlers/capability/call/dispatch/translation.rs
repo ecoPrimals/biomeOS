@@ -87,10 +87,20 @@ impl CapabilityHandler {
             )
         };
 
-        let result = self
-            .router
-            .forward_request_with_timeout(&endpoint, &forward_method, &ctx.args, ctx.timeout_cap)
-            .await;
+        let result = if trans.ribocipher {
+            self.router
+                .forward_request_ribocipher(&endpoint, &forward_method, &ctx.args, ctx.timeout_cap)
+                .await
+        } else {
+            self.router
+                .forward_request_with_timeout(
+                    &endpoint,
+                    &forward_method,
+                    &ctx.args,
+                    ctx.timeout_cap,
+                )
+                .await
+        };
 
         // Self-healing: if forward failed, the endpoint may be stale (e.g., graph-bootstrap
         // registered {primal}-{family}.sock but the primal bound to {primal}.sock).
@@ -103,14 +113,25 @@ impl CapabilityHandler {
                         semantic_name,
                         refreshed.display_string()
                     );
-                    self.router
-                        .forward_request_with_timeout(
-                            &refreshed,
-                            &forward_method,
-                            &ctx.args,
-                            ctx.timeout_cap,
-                        )
-                        .await
+                    if trans.ribocipher {
+                        self.router
+                            .forward_request_ribocipher(
+                                &refreshed,
+                                &forward_method,
+                                &ctx.args,
+                                ctx.timeout_cap,
+                            )
+                            .await
+                    } else {
+                        self.router
+                            .forward_request_with_timeout(
+                                &refreshed,
+                                &forward_method,
+                                &ctx.args,
+                                ctx.timeout_cap,
+                            )
+                            .await
+                    }
                 } else {
                     result
                 }

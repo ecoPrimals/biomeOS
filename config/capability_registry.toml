@@ -756,6 +756,7 @@ capabilities = [
 
 [domains.ephemeral_workspace]
 provider = "rhizocrypt"
+ribocipher = true
 capabilities = [
     "ephemeral_workspace",
     "dag",
@@ -814,6 +815,7 @@ capabilities = [
 
 [domains.attribution]
 provider = "sweetgrass"
+ribocipher = true
 capabilities = [
     "attribution",
     "braid",

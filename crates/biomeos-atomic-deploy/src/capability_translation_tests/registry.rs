@@ -297,6 +297,7 @@ fn test_capability_translation_struct() {
         provider: "beardog".to_string(),
         actual_method: "actual_method".to_string(),
         socket: "/tmp/beardog.sock".to_string(),
+        ribocipher: false,
         param_mappings: param_mappings.clone(),
         metadata: HashMap::new(),
     };
@@ -313,6 +314,7 @@ fn test_capability_translation_serde() {
         provider: "beardog".to_string(),
         actual_method: "chacha20_encrypt".to_string(),
         socket: "/tmp/b.sock".to_string(),
+        ribocipher: false,
         param_mappings: HashMap::new(),
         metadata: HashMap::new(),
     };

@@ -23,12 +23,28 @@ use super::socket;
 struct RegistryToml {
     #[serde(default)]
     translations: HashMap<String, HashMap<String, TranslationEntry>>,
+    #[serde(default)]
+    domains: HashMap<String, DomainEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DomainEntry {
+    #[allow(dead_code)]
+    #[serde(default)]
+    provider: String,
+    #[serde(default)]
+    ribocipher: bool,
+    #[allow(dead_code)]
+    #[serde(default)]
+    capabilities: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct TranslationEntry {
     provider: String,
     method: String,
+    #[serde(default)]
+    ribocipher: bool,
 }
 
 /// Load capability translations from a TOML registry file.
@@ -77,7 +93,19 @@ pub fn load_from_registry_toml(
     let provider_overrides = resolve_provider_overrides();
     let mut count = 0;
 
+    // Build domain→ribocipher lookup for inheritance
+    let domain_ribocipher: HashMap<&str, bool> = parsed
+        .domains
+        .iter()
+        .map(|(name, entry)| (name.as_str(), entry.ribocipher))
+        .collect();
+
     for (domain, entries) in &parsed.translations {
+        let domain_requires_ribocipher = domain_ribocipher
+            .get(domain.as_str())
+            .copied()
+            .unwrap_or(false);
+
         for (semantic_key, entry) in entries {
             let actual_provider = provider_overrides
                 .get(domain.as_str())
@@ -86,12 +114,15 @@ pub fn load_from_registry_toml(
 
             let socket_path = socket::resolve_primal_socket(actual_provider, family_id);
 
-            registry.register_translation(
+            let use_ribocipher = entry.ribocipher || domain_requires_ribocipher;
+
+            registry.register_translation_full(
                 semantic_key,
                 actual_provider,
                 &entry.method,
                 socket_path,
                 None,
+                use_ribocipher,
             );
             count += 1;
         }
