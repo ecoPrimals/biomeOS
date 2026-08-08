@@ -1,6 +1,6 @@
 # biomeOS Wave 157a — G68 + D8 + D4 Handoff
 
-**Date**: Aug 7, 2026 6:30PM→9:30PM | **Commits**: `b13d308b`, `03355e81`, `d721b959`, `1dc67ae0` | **From**: biomeOS Code Team on eastGate
+**Date**: Aug 7–8, 2026 6:30PM→6:55AM | **Commits**: `b13d308b`, `03355e81`, `d721b959`, `1dc67ae0`, `6f60cccf` | **From**: biomeOS Code Team on eastGate
 
 ---
 
@@ -142,4 +142,39 @@ The sourDough scanner v2 "Depot Ready" audit flagged 4 remaining:
 
 ---
 
-*biomeOS Code Team — Wave 157a. **G68 FULLY COMPLIANT** (0 prod violations, 0 scanner hits). D8 CLOSED. D4 CLOSED.*
+## ADDENDUM: `6f60cccf` — Neural API Routing Gaps (Aug 8, 6:55AM)
+
+From overwatch blurb "Wave 157a Neural API Routing" — two routing gaps assigned to biomeOS:
+
+### 1. Provenance Query Timeout (Gap 7)
+
+**Root cause**: `NeuralRouter::request_timeout` was initialized from `ROUTER_WEIGHT_EVICTION_INTERVAL` (30s) — a stale-weight eviction constant, not a request timeout. This meant:
+- Forward failures waited 30s before triggering self-healing
+- Provenance queries to sweetGrass appeared to "timeout" when sweetGrass was slow to start
+
+**Fix**: Router now uses `CAPABILITY_CALL_TIMEOUT` (15s). Combined with the existing self-healing retry on forward failure, stale endpoints are corrected faster.
+
+### 2. Direct `braid.*` Routing (primalSpring registry gap)
+
+**Problem**: primalSpring calls `braid.list`, `braid.query`, `braid.get_by_hash`, `braid.batch_create`, `braid.batch_commit`, `braid.delete` directly — but only `provenance.*` prefixed routes existed.
+
+**Fix**: Added 10 direct `braid.*` translations pointing to sweetGrass + 2 `convergence.*` translations pointing to primalSpring. Added `anchoring` to sweetGrass domain capabilities.
+
+### 3. `composition.test_swap` Permission Denied (Gap 1)
+
+**Problem**: Socket was created in `/tmp/biomeos-test-swap/` which fails under NUCLEUS systemd `PrivateTmp=yes`. Directory creation error was swallowed with `.ok()`.
+
+**Fix**: Socket dir now created as sibling of `neural_api_socket` (inside the membrane runtime directory, which already has `SocketDir` permissions). Error reported properly if dir creation fails.
+
+### Upstream Items
+
+| For | Item |
+|-----|------|
+| **sweetGrass** | Implement `primal.announce` at startup for faster discovery (TOML bridge works as fallback) |
+| **sweetGrass** | Implement `braid.list` method (used by primalSpring convergence checks) |
+| **primalSpring** | Implement `convergence.check` and `convergence.batch_check` methods |
+| **cellMembrane** | Re-test cascade `composition.test_swap` with membrane-dir socket path |
+
+---
+
+*biomeOS Code Team — Wave 157a. **G68 FULLY COMPLIANT** (0 prod violations, 0 scanner hits). D8 CLOSED. D4 CLOSED. Routing gaps 1+7 CLOSED.*
