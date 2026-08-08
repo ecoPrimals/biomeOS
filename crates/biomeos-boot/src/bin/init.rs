@@ -12,8 +12,6 @@
 use anyhow::{Context, Result};
 use biomeos_boot::{BootLogger, BootStage};
 use biomeos_core::observability::MinimalObserver;
-use rustix::mount::{MountFlags, mount};
-use rustix::process::getpid;
 use std::path::Path;
 use std::process::ExitCode;
 use std::time::Instant;
@@ -46,14 +44,13 @@ async fn main() -> ExitCode {
     };
 
     // Verify we're PID 1
-    let pid = getpid();
-    let pid_raw = rustix::process::Pid::as_raw(Some(pid));
+    let pid_raw = std::process::id();
 
     if let Some(ref mut logger) = boot_logger {
         logger.info(&format!("PID: {pid_raw}"));
     }
 
-    if !pid.is_init() {
+    if pid_raw != 1 {
         if let Some(ref mut logger) = boot_logger {
             logger.critical(&format!("Must run as PID 1, got {pid_raw}"));
         }
@@ -230,55 +227,60 @@ async fn mount_essential_filesystems() -> Result<()> {
     info!("📁 Mounting essential filesystems...");
 
     // /proc - Process information
-    mount_filesystem("proc", "/proc", "proc", MountFlags::empty())
-        .context("Failed to mount /proc")?;
+    mount_filesystem("proc", "/proc", "proc", 0).context("Failed to mount /proc")?;
 
     // /sys - Kernel and device information
-    mount_filesystem("sysfs", "/sys", "sysfs", MountFlags::empty())
-        .context("Failed to mount /sys")?;
+    mount_filesystem("sysfs", "/sys", "sysfs", 0).context("Failed to mount /sys")?;
 
     // /dev - Device files
-    mount_filesystem("devtmpfs", "/dev", "devtmpfs", MountFlags::empty())
-        .context("Failed to mount /dev")?;
+    mount_filesystem("devtmpfs", "/dev", "devtmpfs", 0).context("Failed to mount /dev")?;
 
     // /dev/pts - Pseudo-terminals
-    mount_filesystem("devpts", "/dev/pts", "devpts", MountFlags::empty())
-        .context("Failed to mount /dev/pts")?;
+    mount_filesystem("devpts", "/dev/pts", "devpts", 0).context("Failed to mount /dev/pts")?;
 
     // /dev/shm - Shared memory
-    mount_filesystem("tmpfs", "/dev/shm", "tmpfs", MountFlags::empty())
-        .context("Failed to mount /dev/shm")?;
+    mount_filesystem("tmpfs", "/dev/shm", "tmpfs", 0).context("Failed to mount /dev/shm")?;
 
     // /run - Runtime data
-    mount_filesystem("tmpfs", "/run", "tmpfs", MountFlags::empty())
-        .context("Failed to mount /run")?;
+    mount_filesystem("tmpfs", "/run", "tmpfs", 0).context("Failed to mount /run")?;
 
     // /tmp - Temporary files
-    mount_filesystem("tmpfs", "/tmp", "tmpfs", MountFlags::empty())
-        .context("Failed to mount /tmp")?;
+    mount_filesystem("tmpfs", "/tmp", "tmpfs", 0).context("Failed to mount /tmp")?;
 
     info!("✅ Essential filesystems mounted");
     Ok(())
 }
 
+/// MS_RDONLY flag for read-only mount (Linux kernel value).
+const MS_RDONLY: u32 = 1;
+
 /// Mount a single filesystem (helper)
-fn mount_filesystem(source: &str, target: &str, fstype: &str, flags: MountFlags) -> Result<()> {
-    // Create mount point if it doesn't exist
+fn mount_filesystem(source: &str, target: &str, fstype: &str, flags: u32) -> Result<()> {
     std::fs::create_dir_all(target)
         .with_context(|| format!("Failed to create directory: {target}"))?;
 
-    // Try to mount - if already mounted (EBUSY), that's OK
-    match mount(source, target, fstype, flags, None::<&std::ffi::CStr>) {
-        Ok(()) => {
-            info!("  ✓ {}", target);
-            Ok(())
+    #[cfg(target_os = "linux")]
+    {
+        use rustix::mount::{MountFlags, mount};
+        let mount_flags = MountFlags::from_bits_retain(flags);
+        match mount(source, target, fstype, mount_flags, None::<&std::ffi::CStr>) {
+            Ok(()) => {
+                info!("  ✓ {}", target);
+                Ok(())
+            }
+            Err(rustix::io::Errno::BUSY) => {
+                info!("  ✓ {} (already mounted)", target);
+                Ok(())
+            }
+            Err(e) => Err(anyhow::anyhow!("Failed to mount {source} on {target}: {e}")),
         }
-        Err(rustix::io::Errno::BUSY) => {
-            // Already mounted - this is fine
-            info!("  ✓ {} (already mounted)", target);
-            Ok(())
-        }
-        Err(e) => Err(anyhow::anyhow!("Failed to mount {source} on {target}: {e}")),
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = (source, fstype, flags);
+        info!("  ✓ {} (skipped: not Linux)", target);
+        Ok(())
     }
 }
 
@@ -365,7 +367,7 @@ async fn mount_biomeos_usb(device: &Path) -> Result<()> {
         .to_str()
         .ok_or_else(|| anyhow::anyhow!("Invalid UTF-8 in device path"))?;
 
-    mount_filesystem(device_str, "/biomeos", "auto", MountFlags::RDONLY)
+    mount_filesystem(device_str, "/biomeos", "auto", MS_RDONLY)
         .context("Failed to mount BiomeOS USB")?;
 
     info!("✅ BiomeOS USB mounted at /biomeos");

@@ -6,7 +6,6 @@
 //! Creates and manages device nodes required for boot logging.
 
 use crate::init_error::{BootError, Result};
-use rustix::fs::{CWD, FileType, Mode, makedev, mknodat};
 use std::path::Path;
 
 /// Manages device node creation and permissions
@@ -47,13 +46,7 @@ impl DeviceManager {
 
         // Create character device
         // Major 4 = TTY devices, Minor 64 = ttyS0 (COM1)
-        let mode = Mode::from_bits_truncate(0o660);
-        mknodat(CWD, path, FileType::CharacterDevice, mode, makedev(4, 64)).map_err(|e| {
-            BootError::DeviceCreation {
-                device: path.to_string(),
-                error: format!("mknod failed: {e}"),
-            }
-        })?;
+        crate::platform_boot::platform_mknod(path, 4, 64)?;
 
         // Note: chown requires additional nix features
         // For now, device is created with current user permissions
@@ -77,13 +70,7 @@ impl DeviceManager {
         }
 
         // Major 4, Minor 0 = tty0 (VGA console)
-        let mode = Mode::from_bits_truncate(0o660);
-        mknodat(CWD, path, FileType::CharacterDevice, mode, makedev(4, 0)).map_err(|e| {
-            BootError::DeviceCreation {
-                device: path.to_string(),
-                error: format!("mknod failed: {e}"),
-            }
-        })?;
+        crate::platform_boot::platform_mknod(path, 4, 0)?;
 
         Ok(())
     }
@@ -102,12 +89,7 @@ impl DeviceManager {
         }
 
         // Create symlink
-        std::os::unix::fs::symlink(target, console_path).map_err(|e| {
-            BootError::DeviceCreation {
-                device: console_path.to_string(),
-                error: format!("symlink failed: {e}"),
-            }
-        })?;
+        crate::platform_boot::platform_link(target, console_path)?;
 
         Ok(())
     }
@@ -117,6 +99,7 @@ impl DeviceManager {
 mod tests {
     use super::*;
     use crate::init_error::BootError;
+    use rustix::fs::makedev;
     use std::path::{Path, PathBuf};
 
     #[test]

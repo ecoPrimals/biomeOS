@@ -31,6 +31,8 @@ pub mod init_params;
 pub mod init_shell;
 pub mod init_usb;
 pub mod initramfs;
+/// G68 Platform Boot Abstractions (symlinks, mode queries, mounts, mknod)
+pub mod platform_boot;
 pub mod rootfs;
 
 pub use boot_logger::{BootLogger, BootStage, LogLevel};

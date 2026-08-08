@@ -6,7 +6,6 @@
 //! Handles mounting and managing essential filesystems during boot.
 
 use crate::init_error::{BootError, Result};
-use rustix::mount::{MountFlags, mount};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use tracing::info;
@@ -37,32 +36,28 @@ impl FilesystemManager {
         info!("📁 Mounting essential filesystems...");
 
         // /proc - Process information
-        self.mount_if_needed("/proc", "proc", "proc", MountFlags::empty())
-            .await?;
+        self.mount_if_needed("/proc", "proc", "proc", 0).await?;
 
         // /sys - Kernel and device information
-        self.mount_if_needed("/sys", "sysfs", "sysfs", MountFlags::empty())
-            .await?;
+        self.mount_if_needed("/sys", "sysfs", "sysfs", 0).await?;
 
         // /dev - Device files (may already be mounted by kernel)
-        self.mount_if_needed("/dev", "devtmpfs", "devtmpfs", MountFlags::empty())
+        self.mount_if_needed("/dev", "devtmpfs", "devtmpfs", 0)
             .await?;
 
         // /dev/pts - Pseudo-terminals
-        self.mount_if_needed("/dev/pts", "devpts", "devpts", MountFlags::empty())
+        self.mount_if_needed("/dev/pts", "devpts", "devpts", 0)
             .await?;
 
         // /dev/shm - Shared memory
-        self.mount_if_needed("/dev/shm", "tmpfs", "tmpfs", MountFlags::empty())
+        self.mount_if_needed("/dev/shm", "tmpfs", "tmpfs", 0)
             .await?;
 
         // /run - Runtime data
-        self.mount_if_needed("/run", "tmpfs", "tmpfs", MountFlags::empty())
-            .await?;
+        self.mount_if_needed("/run", "tmpfs", "tmpfs", 0).await?;
 
         // /tmp - Temporary files
-        self.mount_if_needed("/tmp", "tmpfs", "tmpfs", MountFlags::empty())
-            .await?;
+        self.mount_if_needed("/tmp", "tmpfs", "tmpfs", 0).await?;
 
         info!("✅ Essential filesystems mounted");
         Ok(())
@@ -86,7 +81,7 @@ impl FilesystemManager {
         target: impl AsRef<Path>,
         source: &str,
         fstype: &str,
-        flags: MountFlags,
+        flags: u32,
     ) -> Result<()> {
         let target_path = target.as_ref().to_path_buf();
 
@@ -103,30 +98,20 @@ impl FilesystemManager {
             }
         })?;
 
-        // Try to mount (rustix: source, target, fstype, flags, data)
-        match mount(
-            source,
-            target.as_ref(),
-            fstype,
-            flags,
-            None::<&std::ffi::CStr>,
-        ) {
+        match crate::platform_boot::platform_mount(source, target.as_ref(), fstype, flags) {
             Ok(()) => {
                 info!("  ✓ {}", target.as_ref().display());
                 self.mounted.insert(target_path);
                 Ok(())
             }
-            Err(rustix::io::Errno::BUSY) => {
-                // Already mounted by kernel - this is fine
+            Err(crate::init_error::BootError::MountFailed { errno, .. })
+                if errno == rustix::io::Errno::BUSY =>
+            {
                 info!("  ✓ {} (already mounted)", target.as_ref().display());
                 self.mounted.insert(target_path);
                 Ok(())
             }
-            Err(e) => Err(BootError::mount_failed(
-                target.as_ref().display().to_string(),
-                source,
-                e,
-            )),
+            Err(e) => Err(e),
         }
     }
 

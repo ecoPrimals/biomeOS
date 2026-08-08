@@ -166,8 +166,9 @@ impl RootFsBuilder {
                 if symlink_dest.exists() {
                     std::fs::remove_file(&symlink_dest)?;
                 }
-                std::os::unix::fs::symlink(&dest, &symlink_dest)
-                    .with_context(|| format!("Failed to symlink service {service_name}"))?;
+                crate::platform_boot::platform_link(&dest, &symlink_dest).map_err(|e| {
+                    anyhow::anyhow!("Failed to symlink service {service_name}: {e}")
+                })?;
 
                 info!("  ✓ Installed and enabled service {}", service_name);
                 count += 1;
