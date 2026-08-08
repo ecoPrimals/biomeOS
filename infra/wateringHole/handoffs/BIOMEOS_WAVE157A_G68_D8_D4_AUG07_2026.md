@@ -1,6 +1,6 @@
 # biomeOS Wave 157a — G68 + D8 + D4 Handoff
 
-**Date**: Aug 7–8, 2026 6:30PM→6:55AM | **Commits**: `b13d308b`, `03355e81`, `d721b959`, `1dc67ae0`, `6f60cccf` | **From**: biomeOS Code Team on eastGate
+**Date**: Aug 7–8, 2026 6:30PM→8:00AM | **Commits**: `b13d308b`, `03355e81`, `d721b959`, `1dc67ae0`, `6f60cccf`, `44c40191` | **From**: biomeOS Code Team on eastGate
 
 ---
 
@@ -177,4 +177,28 @@ From overwatch blurb "Wave 157a Neural API Routing" — two routing gaps assigne
 
 ---
 
-*biomeOS Code Team — Wave 157a. **G68 FULLY COMPLIANT** (0 prod violations, 0 scanner hits). D8 CLOSED. D4 CLOSED. Routing gaps 1+7 CLOSED.*
+## ADDENDUM: `44c40191` — Dispatch Timeout Root Cause (Aug 8, 8:00AM)
+
+### capability.call dispatch ordering bug
+
+**Symptom**: Every `provenance.*`, `braid.*`, and other domain-specific `capability.call` dispatch took 15s before succeeding — the full `CAPABILITY_CALL_TIMEOUT`.
+
+**Root cause**: The dispatch path was ordered:
+```
+signal graph → Tower Atomic relay (Songbird) → translation registry → direct
+```
+
+Tower Atomic relay is a network forward to Songbird. For capabilities Songbird can't handle (provenance, braid, compute, etc.), it waits 15s for the timeout, THEN falls back to the translation registry which routes correctly in <1ms.
+
+**Fix**: Reordered dispatch to:
+```
+signal graph → translation registry → Tower Atomic relay → direct
+```
+
+Translation registry is an in-memory hashmap lookup (zero network I/O). Known capabilities now route in microseconds. Tower Atomic relay is now the fallback for unknown/composite capabilities only.
+
+**Impact**: All registered `capability.call` dispatches go from 15s → <50ms. Fixes the "dispatch timeout" reported by overwatch.
+
+---
+
+*biomeOS Code Team — Wave 157a. **G68 FULLY COMPLIANT**. D8 CLOSED. D4 CLOSED. Routing gaps 1+7 CLOSED. Dispatch timeout FIXED.*
