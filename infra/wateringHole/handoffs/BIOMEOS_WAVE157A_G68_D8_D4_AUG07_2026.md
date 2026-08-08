@@ -1,6 +1,6 @@
 # biomeOS Wave 157a — G68 + D8 + D4 Handoff
 
-**Date**: Aug 7, 2026 6:30PM→9:00PM | **Commits**: `b13d308b`, `03355e81`, `d721b959` | **From**: biomeOS Code Team on eastGate
+**Date**: Aug 7, 2026 6:30PM→9:30PM | **Commits**: `b13d308b`, `03355e81`, `d721b959`, `1dc67ae0` | **From**: biomeOS Code Team on eastGate
 
 ---
 
@@ -127,4 +127,19 @@ biomeOS production code has **zero** L1/L2/L3 violations per scanner v2.
 
 ---
 
-*biomeOS Code Team — Wave 157a. G68 COMPLIANT (0 prod violations). D8 CLOSED. D4 CLOSED.*
+## ADDENDUM: `1dc67ae0` — Final 4 Violations Cleared (9:30PM)
+
+The sourDough scanner v2 "Depot Ready" audit flagged 4 remaining:
+- 3 L2: `PermissionsExt`/`set_mode` in `vm_federation_manager_tests/mod.rs`
+- 1 L3: `rustix` in `boot_logger/device_mgr.rs` test module
+
+**Resolution**:
+- `vm_federation_manager_tests/mod.rs` — replaced `set_mode(0o755)` with `PlatformAccess::Executable.apply()`, removed `PermissionsExt` import
+- `boot_logger/device_mgr.rs` — gated `rustix` test assertions behind `#[cfg(target_os = "linux")]`
+- `init_filesystem.rs` — aligned test calls to use `u32` flags (cleanup from prior mount abstraction)
+
+**Note for sourDough**: `vm_federation_manager_tests` module is `#[cfg(all(test, unix))]` — scanner should flag as test-only, not production.
+
+---
+
+*biomeOS Code Team — Wave 157a. **G68 FULLY COMPLIANT** (0 prod violations, 0 scanner hits). D8 CLOSED. D4 CLOSED.*
