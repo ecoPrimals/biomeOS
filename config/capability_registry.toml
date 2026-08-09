@@ -1236,6 +1236,24 @@ capabilities = [
     "repurposing",
     "cell.tideglass",
 ]
+
+[domains.gossip]
+provider = "swarmvine"
+capabilities = [
+    "gossip",
+    "mesh",
+    "epidemic",
+]
+
+[translations.gossip]
+"gossip.status" = { provider = "swarmvine", method = "gossip.status" }
+"gossip.peers" = { provider = "swarmvine", method = "gossip.peers" }
+"gossip.inject" = { provider = "swarmvine", method = "gossip.inject" }
+"gossip.query" = { provider = "swarmvine", method = "gossip.query" }
+"gossip.subscribe" = { provider = "swarmvine", method = "gossip.subscribe" }
+"gossip.advertise" = { provider = "swarmvine", method = "gossip.advertise" }
+"mesh.topology" = { provider = "swarmvine", method = "mesh.topology" }
+"mesh.peer_count" = { provider = "swarmvine", method = "mesh.peer_count" }
 # These are composite operations that span multiple primals and are resolved
 # via signal graphs. The "provider" is biomeOS itself — the Neural API
 # intercepts these and dispatches via the corresponding signal graph TOML.

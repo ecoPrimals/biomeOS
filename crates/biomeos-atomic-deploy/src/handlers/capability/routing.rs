@@ -67,28 +67,50 @@ impl CapabilityHandler {
             })
             .await;
 
-        let atomic = result?;
+        match result {
+            Ok(atomic) => {
+                let primary_primal = atomic
+                    .primals
+                    .iter()
+                    .find(|p| p.endpoint == atomic.primary_endpoint)
+                    .or_else(|| atomic.primals.first())
+                    .map(|p| &*p.name)
+                    .unwrap_or("unknown");
 
-        let primary_primal = atomic
-            .primals
-            .iter()
-            .find(|p| p.endpoint == atomic.primary_endpoint)
-            .or_else(|| atomic.primals.first())
-            .map(|p| &*p.name)
-            .unwrap_or("unknown");
+                info!(
+                    "   ✓ Resolved {} → {} in {}ms",
+                    capability, primary_primal, latency
+                );
 
-        info!(
-            "   ✓ Resolved {} → {} in {}ms",
-            capability, primary_primal, latency
-        );
-
-        Ok(json!({
-            "resolved": true,
-            "capability": capability,
-            "endpoint": atomic.primary_endpoint.display_string(),
-            "primal": primary_primal,
-            "provider_count": atomic.primals.len()
-        }))
+                Ok(json!({
+                    "resolved": true,
+                    "capability": capability,
+                    "endpoint": atomic.primary_endpoint.display_string(),
+                    "primal": primary_primal,
+                    "provider_count": atomic.primals.len(),
+                    "locality": "local"
+                }))
+            }
+            Err(_local_err) => {
+                // Local discovery failed — try swarmVine gossip for cross-gate hints
+                if let Some(hint) = self.router.try_gossip_capability_lookup(capability).await {
+                    info!(
+                        "   ✓ Resolved {} → {} @ {} via gossip in {}ms",
+                        capability, hint.primal, hint.gate, latency
+                    );
+                    return Ok(json!({
+                        "resolved": true,
+                        "capability": capability,
+                        "primal": hint.primal,
+                        "gate": hint.gate,
+                        "locality": "remote",
+                        "routing": "mesh",
+                        "provider_count": 1
+                    }));
+                }
+                Err(_local_err)
+            }
+        }
     }
 
     /// Discover primals that provide a capability.

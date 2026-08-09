@@ -22,19 +22,65 @@ impl CapabilityHandler {
         args: &Value,
         timeout: Option<std::time::Duration>,
     ) -> Option<Result<Value>> {
+        self.songbird_dispatch_inner(capability, operation, args, timeout, "any", None)
+            .await
+    }
+
+    /// Targeted mesh dispatch using swarmVine gossip intelligence.
+    ///
+    /// Unlike broadcast `routing: "any"`, this sends the request directly to a
+    /// specific gate that advertised the capability via gossip. Faster because
+    /// songBird can skip peer-by-peer probing.
+    pub(super) async fn try_songbird_mesh_dispatch_targeted(
+        &self,
+        capability: &str,
+        operation: &str,
+        args: &Value,
+        timeout: Option<std::time::Duration>,
+        target_gate: &str,
+        target_primal: &str,
+    ) -> Option<Result<Value>> {
+        debug!(
+            "Targeted mesh dispatch: {capability}.{operation} → {target_primal} @ {target_gate}"
+        );
+        self.songbird_dispatch_inner(
+            capability,
+            operation,
+            args,
+            timeout,
+            "targeted",
+            Some((target_gate, target_primal)),
+        )
+        .await
+    }
+
+    async fn songbird_dispatch_inner(
+        &self,
+        capability: &str,
+        operation: &str,
+        args: &Value,
+        timeout: Option<std::time::Duration>,
+        routing: &str,
+        target: Option<(&str, &str)>,
+    ) -> Option<Result<Value>> {
         let relay_endpoint = self.router.find_primal_by_capability("relay").await.ok()?;
 
         debug!(
-            "Songbird mesh dispatch: {capability}.{operation} via {}",
+            "Songbird mesh dispatch ({routing}): {capability}.{operation} via {}",
             relay_endpoint.endpoint.display_string()
         );
 
-        let songbird_params = json!({
+        let mut songbird_params = json!({
             "capability": capability,
             "operation": operation,
             "params": args,
-            "routing": "any",
+            "routing": routing,
         });
+
+        if let Some((gate, primal)) = target {
+            songbird_params["target_gate"] = json!(gate);
+            songbird_params["target_primal"] = json!(primal);
+        }
 
         let mesh_timeout = timeout.or(Some(std::time::Duration::from_secs(15)));
         let result = self
@@ -58,7 +104,6 @@ impl CapabilityHandler {
                     .and_then(|v| v.as_str())
                     .unwrap_or("unknown");
                 debug!("Songbird mesh resolved: {capability}.{operation} → {provider} @ {gate}");
-                // Unwrap inner result: Songbird wraps as { provider, gate, result }
                 let inner = response
                     .get("result")
                     .cloned()

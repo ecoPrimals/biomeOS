@@ -13,6 +13,7 @@
 pub mod composition;
 mod discovery;
 mod discovery_composite;
+mod discovery_gossip;
 mod discovery_primal;
 mod discovery_registry;
 mod forwarding;

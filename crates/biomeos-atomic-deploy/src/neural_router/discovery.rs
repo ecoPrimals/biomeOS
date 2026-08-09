@@ -18,6 +18,10 @@ impl NeuralRouter {
     /// Resolution order:
     /// 1. Exact key lookup in capability registry
     /// 2. Lazy socket rescan (BM-04) + retry exact lookup
+    /// 3. Domain prefix matching
+    /// 4. Composite atomics and category discovery
+    /// 5. Domain fallback (capability_domains.rs)
+    /// 6. Not found error (caller should try gossip/mesh dispatch)
     /// 3. Domain prefix matching — `"dag"` finds `"dag.session.create"` etc.
     /// 4. Composite atomic discovery (Tower, Nest, Node)
     /// 5. Category-based discovery (security, ai, math, ...)

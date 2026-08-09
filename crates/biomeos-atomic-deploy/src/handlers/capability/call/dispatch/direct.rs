@@ -139,9 +139,52 @@ impl CapabilityHandler {
                 }
             }
             Err(local_err) => {
-                // No local provider found — try Songbird mesh dispatch.
-                // Songbird handles local UDS + remote mesh TCP + TURN relay,
-                // reaching primals on other gates transparently.
+                // No local provider found.
+                // Step 1: Query swarmVine gossip table for a targeted hint.
+                // Step 2: If gossip knows the gate, use targeted mesh dispatch.
+                // Step 3: Otherwise, fall back to Songbird "any" mesh dispatch.
+                if let Some(hint) = self
+                    .router
+                    .try_gossip_capability_lookup(&ctx.capability)
+                    .await
+                {
+                    debug!(
+                        "Gossip hint: {}.{} → {} @ {}",
+                        ctx.capability, ctx.operation, hint.primal, hint.gate
+                    );
+                    if let Some(mesh_result) = self
+                        .try_songbird_mesh_dispatch_targeted(
+                            &ctx.capability,
+                            &ctx.operation,
+                            &ctx.args,
+                            ctx.timeout_cap,
+                            &hint.gate,
+                            &hint.primal,
+                        )
+                        .await
+                    {
+                        let elapsed_ms = elapsed_ms_since(start);
+                        let routing_trace = ctx.want_trace.then(|| {
+                            routing_trace_value(
+                                &[
+                                    RoutingPhase::RouteResolved {
+                                        capability: ctx.capability.clone(),
+                                        provider: format!("gossip→{}", hint.primal),
+                                        method: semantic_name.to_string(),
+                                    },
+                                    RoutingPhase::Forwarded { elapsed_ms },
+                                ],
+                                &ctx.capability,
+                            )
+                        });
+                        return Ok(CapabilityCallOutcome {
+                            result: mesh_result?,
+                            routing_trace,
+                        });
+                    }
+                }
+
+                // No gossip hit or targeted dispatch failed — try broadcast mesh
                 if let Some(mesh_result) = self
                     .try_songbird_mesh_dispatch(
                         &ctx.capability,

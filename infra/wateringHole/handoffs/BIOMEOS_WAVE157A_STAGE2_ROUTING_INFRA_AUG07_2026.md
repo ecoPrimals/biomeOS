@@ -117,3 +117,55 @@ In `primals/biomeOS/`:
 2. Overwatch: review debris list above, decide archive vs keep
 3. Depot: redeploy v4.57+ to `depot.primals.eco` via Sovereign CI
 4. Upstream: propagate `capability_registry.toml` pattern to other primals
+
+---
+
+## Addendum: swarmVine Gossip Integration (Aug 8 2026)
+
+**Deliverable**: Wire `capability.resolve` → swarmVine gossip table (Phase 3 item)
+
+### Changes
+
+1. **`discovery_gossip.rs` (NEW)** — Cross-gate capability discovery via swarmVine gossip table.
+   - Queries local swarmVine's `gossip.query` with topic=`tower`, key_prefix=`capability.advertise:`.
+   - Parses entries keyed as `capability.advertise:{gate}:{primal}` → `GossipCapabilityHint`.
+   - 2-second timeout, graceful degradation if swarmVine is absent.
+   - 7 unit tests for response parsing.
+
+2. **`mesh.rs` (ENHANCED)** — Extracted `songbird_dispatch_inner` and added `try_songbird_mesh_dispatch_targeted`.
+   - Targeted dispatch sends `routing: "targeted"` + `target_gate` + `target_primal` to songBird.
+   - songBird can skip peer-by-peer probing when gate is already known via gossip.
+
+3. **`dispatch/direct.rs` (ENHANCED)** — When local discovery fails:
+   - Step 1: Query swarmVine gossip for cross-gate hints
+   - Step 2: If hit, use targeted mesh dispatch (specific gate)
+   - Step 3: Fall back to broadcast mesh (`routing: "any"`)
+
+4. **`routing.rs` (ENHANCED)** — `capability.resolve` now returns gossip hints:
+   - On local miss, queries gossip and returns `{ locality: "remote", gate, primal, routing: "mesh" }`
+   - Clients (primalSpring, etc.) can use this to make routing decisions.
+
+5. **`capability_registry.toml`** — Added `[domains.gossip]` and `[translations.gossip]`:
+   - `gossip.status`, `gossip.peers`, `gossip.inject`, `gossip.query`, `gossip.subscribe`, `gossip.advertise`
+   - `mesh.topology`, `mesh.peer_count`
+   - Provider: swarmvine
+
+6. **`biomeos-types/primal_names.rs`** — Added `SWARMVINE` constant, display name, and registered in `AUXILIARY_PRIMALS`.
+
+### Architecture
+
+```
+capability.call("crypto.sign", ...) → local discovery fails
+  → gossip.query(topic="tower", key_prefix="capability.advertise:", value_contains="crypto")
+  → swarmVine returns: { entries: [{ key: "capability.advertise:ironGate:beardog", value: "crypto,security" }] }
+  → Targeted mesh dispatch: songBird.capability.call(routing="targeted", target_gate="ironGate", target_primal="beardog")
+  → Result returned from ironGate's beardog
+```
+
+### Verification
+
+- `cargo check --all-targets`: clean
+- `cargo test --package biomeos-atomic-deploy`: **1,597 passed, 0 failed**
+- `cargo test --package biomeos-types`: **1,091 passed, 0 failed**
+- `cargo fmt --check`: clean
+- Discovery gossip parser tests: 7/7 pass
