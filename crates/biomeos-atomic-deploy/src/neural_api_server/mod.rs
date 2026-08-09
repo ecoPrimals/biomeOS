@@ -192,14 +192,16 @@ impl NeuralApiServer {
                 .as_deref()
                 .and_then(|p| p.exists().then_some(()))
                 .is_some();
-            let remote_socket = socket_path.to_string_lossy().to_string();
+            // P0-C fix: DO NOT wire remote_infer to the Neural API's own socket.
+            // This caused recursive capability.call → select_primary → shadow_compare_remote
+            // → capability.call loops, leaking ~14K FDs per call. Remote inference
+            // will be wired to barraCuda's direct socket once available.
             let dispatcher = crate::neural_router::PerceptronDispatcher::new(
                 weights.unwrap_or_else(crate::neural_router::PerceptronWeights::neutral_default),
                 crate::neural_router::PerceptronPhase::Shadow,
-            )
-            .with_remote_infer(remote_socket);
+            );
             tracing::info!(
-                "perceptron: shadow mode active ({}, remote infer wired)",
+                "perceptron: shadow mode active ({}, local-only inference)",
                 if has_trained {
                     "trained weights"
                 } else {

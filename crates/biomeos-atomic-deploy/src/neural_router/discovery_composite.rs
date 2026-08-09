@@ -122,13 +122,11 @@ impl NeuralRouter {
                     provider.primal_name, capability
                 );
 
-                let healthy = self.quick_health_check(&provider.endpoint).await;
-
                 return Ok(DiscoveredPrimal {
                     name: provider.primal_name.clone(),
                     endpoint: provider.endpoint.clone(),
                     capabilities: vec![capability.to_string()],
-                    healthy,
+                    healthy: true,
                     last_check: chrono::Utc::now(),
                 });
             }

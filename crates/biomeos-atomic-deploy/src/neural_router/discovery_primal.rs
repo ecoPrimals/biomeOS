@@ -82,13 +82,12 @@ impl NeuralRouter {
         let endpoint = TransportEndpoint::UnixSocket {
             path: socket_path.clone(),
         };
-        let healthy = self.quick_health_check(&endpoint).await;
 
         let primal = DiscoveredPrimal {
             name: Arc::from(primal_name),
             endpoint: endpoint.clone(),
             capabilities: vec![],
-            healthy,
+            healthy: true,
             last_check: chrono::Utc::now(),
         };
 
@@ -98,10 +97,9 @@ impl NeuralRouter {
         }
 
         debug!(
-            "   ✅ Discovered: {} @ {} (healthy: {})",
+            "   ✅ Discovered: {} @ {}",
             primal_name,
             endpoint.display_string(),
-            healthy
         );
 
         Ok(primal)
@@ -194,45 +192,6 @@ impl NeuralRouter {
         }
 
         None
-    }
-
-    /// Transport-aware health check via `AtomicClient`
-    ///
-    /// Any successful JSON-RPC response means the primal is alive. Only
-    /// connection failures, timeouts, or JSON-RPC error responses indicate death.
-    /// This prevents "socket evaporation" where primals that respond with
-    /// non-standard formats (e.g. `{"status":"alive"}` instead of `{"healthy":true}`)
-    /// are falsely marked dead.
-    ///
-    /// Dual-protocol: tries plain JSON-RPC first, BTSP fallback for secure primals.
-    pub(crate) async fn quick_health_check(&self, endpoint: &TransportEndpoint) -> bool {
-        let health_timeout = std::time::Duration::from_millis(500);
-
-        let client = AtomicClient::from_endpoint(endpoint.clone()).with_timeout(health_timeout);
-
-        // Plain JSON-RPC first (works for most primals)
-        if client
-            .call("health.check", serde_json::json!({}))
-            .await
-            .is_ok()
-        {
-            return true;
-        }
-
-        // BTSP fallback (secure primals)
-        match client
-            .call_btsp("health.check", serde_json::json!({}))
-            .await
-        {
-            Ok(_) => true,
-            Err(_) => {
-                debug!(
-                    "   ⚠️ Health check failed for {} (both plain and BTSP)",
-                    endpoint.display_string()
-                );
-                false
-            }
-        }
     }
 
     /// Transport-aware health check (static, for use without `&self`)

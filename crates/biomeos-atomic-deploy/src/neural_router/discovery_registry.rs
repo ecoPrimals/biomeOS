@@ -185,12 +185,11 @@ impl NeuralRouter {
 
         let mut primals = Vec::new();
         for provider in &providers {
-            let healthy = Self::check_endpoint_health(&provider.endpoint).await;
             primals.push(DiscoveredPrimal {
                 name: provider.primal_name.clone(),
                 endpoint: provider.endpoint.clone(),
                 capabilities: vec![capability.to_string()],
-                healthy,
+                healthy: true,
                 last_check: chrono::Utc::now(),
             });
         }
@@ -240,12 +239,11 @@ impl NeuralRouter {
 
         let mut primals = Vec::new();
         for provider in &unique_providers {
-            let healthy = Self::check_endpoint_health(&provider.endpoint).await;
             primals.push(DiscoveredPrimal {
                 name: provider.primal_name.clone(),
                 endpoint: provider.endpoint.clone(),
                 capabilities: vec![domain.to_string()],
-                healthy,
+                healthy: true,
                 last_check: chrono::Utc::now(),
             });
         }
@@ -310,12 +308,11 @@ impl NeuralRouter {
 
         let mut primals = Vec::new();
         for provider in &matching_providers {
-            let healthy = Self::check_endpoint_health(&provider.endpoint).await;
             primals.push(DiscoveredPrimal {
                 name: provider.primal_name.clone(),
                 endpoint: provider.endpoint.clone(),
                 capabilities: vec![category.to_string()],
-                healthy,
+                healthy: true,
                 last_check: chrono::Utc::now(),
             });
         }

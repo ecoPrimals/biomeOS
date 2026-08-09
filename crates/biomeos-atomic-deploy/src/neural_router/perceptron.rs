@@ -18,6 +18,11 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use super::weights::{ProviderWeight, RoutingWeightTable};
 use biomeos_core::atomic_client::AtomicClient;
 
+tokio::task_local! {
+    /// Re-entrancy guard: prevents recursive shadow_compare_remote calls (P0-C fix).
+    static IN_SHADOW_INFER: bool;
+}
+
 /// Number of input features: 32 one-hot domain slots + 4 numeric per-provider features.
 pub const FEATURE_DIM: usize = 36;
 
@@ -267,6 +272,9 @@ impl PerceptronDispatcher {
     /// and compares the remote recommendation with both L4 rule-based and local
     /// perceptron choices. Falls back to local-only if the remote call fails.
     ///
+    /// A task-local re-entrancy guard prevents infinite recursion if the remote
+    /// socket points back to the same Neural API instance (P0-C defense-in-depth).
+    ///
     /// Wire format sent to `ml.mlp_infer`:
     /// ```json
     /// { "features": [[f32; 36], ...], "model": "routing_perceptron" }
@@ -288,6 +296,12 @@ impl PerceptronDispatcher {
             return local_idx;
         };
 
+        // Re-entrancy guard: skip remote inference if we're already inside a
+        // dispatch cycle to prevent the recursive FD leak (P0-C).
+        if IN_SHADOW_INFER.try_with(|v| *v).unwrap_or(false) {
+            return local_idx;
+        }
+
         let feature_matrix: Vec<Vec<f32>> = features_per_candidate
             .iter()
             .map(|f| f.values.to_vec())
@@ -302,40 +316,58 @@ impl PerceptronDispatcher {
             }
         });
 
-        let client = AtomicClient::unix(socket);
-        match client.call("capability.call", params).await {
-            Ok(result) => {
-                if let Some(scores) = result.get("scores").and_then(|s| s.as_array()) {
-                    let remote_idx = scores
-                        .iter()
-                        .enumerate()
-                        .max_by(|(_, a), (_, b)| {
-                            let sa = a.as_f64().unwrap_or(f64::NEG_INFINITY);
-                            let sb = b.as_f64().unwrap_or(f64::NEG_INFINITY);
-                            sa.partial_cmp(&sb).unwrap_or(std::cmp::Ordering::Equal)
-                        })
-                        .map(|(i, _)| i)
-                        .unwrap_or(0);
+        let socket = socket.clone();
+        let local_idx_copy = local_idx;
+        let capability_owned = capability.to_owned();
+        let dispatch_counter = &self.dispatch_counter;
 
-                    if remote_idx != local_idx {
-                        let n = self.dispatch_counter.load(Ordering::Relaxed);
-                        if n <= 100 || n.is_multiple_of(500) {
-                            tracing::info!(
-                                "L5 remote shadow [{n}]: {capability} local={local_idx} remote={remote_idx} (diverge)"
+        let remote_idx = IN_SHADOW_INFER
+            .scope(true, async {
+                let client = AtomicClient::unix(&socket);
+                match client.call("capability.call", params).await {
+                    Ok(result) => {
+                        if let Some(scores) = result.get("scores").and_then(|s| s.as_array()) {
+                            let idx = scores
+                                .iter()
+                                .enumerate()
+                                .max_by(|(_, a), (_, b)| {
+                                    let sa = a.as_f64().unwrap_or(f64::NEG_INFINITY);
+                                    let sb = b.as_f64().unwrap_or(f64::NEG_INFINITY);
+                                    sa.partial_cmp(&sb).unwrap_or(std::cmp::Ordering::Equal)
+                                })
+                                .map(|(i, _)| i)
+                                .unwrap_or(0);
+
+                            if idx != local_idx_copy {
+                                let n = dispatch_counter.load(Ordering::Relaxed);
+                                if n <= 100 || n.is_multiple_of(500) {
+                                    tracing::info!(
+                                        "L5 remote shadow [{n}]: {} local={local_idx_copy} remote={idx} (diverge)",
+                                        capability_owned
+                                    );
+                                }
+                            }
+                            idx
+                        } else {
+                            tracing::debug!(
+                                "ml.mlp_infer: no scores in response for {}",
+                                capability_owned
                             );
+                            local_idx_copy
                         }
                     }
-                    remote_idx
-                } else {
-                    tracing::debug!("ml.mlp_infer: no scores in response for {capability}");
-                    local_idx
+                    Err(e) => {
+                        tracing::debug!(
+                            "ml.mlp_infer shadow call failed for {}: {e}",
+                            capability_owned
+                        );
+                        local_idx_copy
+                    }
                 }
-            }
-            Err(e) => {
-                tracing::debug!("ml.mlp_infer shadow call failed for {capability}: {e}");
-                local_idx
-            }
-        }
+            })
+            .await;
+
+        remote_idx
     }
 
     /// Shadow statistics: (total dispatches, disagreements).
