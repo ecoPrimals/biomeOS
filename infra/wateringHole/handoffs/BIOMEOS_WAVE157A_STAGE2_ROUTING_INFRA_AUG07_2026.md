@@ -250,3 +250,48 @@ Evolved the Neural API connection handler from simple bool detection to tier-awa
 - `cargo check`: clean
 - `cargo test`: 578 passed, 0 failed
 - `cargo clippy`: 1 pre-existing warning (toml_loader iteration)
+
+---
+
+## Addendum 9: Graph Executor Evolution + P1 FD Fix + Tier 2 Client Pool (Aug 9, 2026)
+
+**Commit**: `3dfb721b` — `feat(executor+P1+tier2): generic capability dispatch, FD limit fix, mito client pool`
+
+### 1. Graph Executor Evolution (G69 enablement)
+
+The executor previously only handled 6 hardcoded capabilities. After this change:
+
+| Capability | Handler | Notes |
+|-----------|---------|-------|
+| `capability_call` | `node_capability_call` | Generic dispatch through Neural API |
+| `graph_foreach` | `node_graph_foreach` | Iterative sub-graph execution (bounded concurrency) |
+| `health_check` / `health.check` | `node_generic_health_check` | Primal socket ping |
+| Any dotted capability (e.g., `crypto.sign`) | `node_capability_call` | Auto-routed via Neural API |
+
+This enables the `depot_lineage.toml` and `depot_lineage_batch.toml` graphs to execute without additional code changes — all provenance operations (`entry.append`, `braid.create`, `spine.seal`, etc.) resolve through `capability.call`.
+
+### 2. P1 FD Exhaustion Self-Heal
+
+| File | Change |
+|------|--------|
+| `crates/biomeos/src/main.rs` | Added `raise_fd_limit()`: raises soft NOFILE to 65536 (or hard limit) at startup using `rustix::process::setrlimit` |
+| `crates/biomeos/Cargo.toml` | Added `"process"` feature to rustix |
+
+This eliminates the P1 dependency on systemd `LimitNOFILE=65536` configuration. biomeOS now self-heals on all 5 affected gates (westGate, strandGate, blueGate, southGate, eastGate) upon next binary deployment.
+
+### 3. Client-Side riboCipher Tier 2
+
+| File | Change |
+|------|--------|
+| `crates/biomeos-core/src/ipc/pool.rs` | Added `send_mito_jsonrpc()`: writes `[0xED, 0x01]` + 32-byte mito-tag on fresh connections. Falls back to Tier 1 when tag unavailable. |
+
+Combined with the server-side Tier 2 from `6917eff2`, the full mito-tag round-trip is now wired:
+- **Client**: `pool.send_mito_jsonrpc(endpoint, request, Some(&tag))` → writes signal + tag
+- **Server**: `validate_mito_tag()` → reads tag → calls `crypto.decode_mito_tag` → accepts/rejects
+
+### Upstream Action
+
+- **All gates**: Deploy new biomeOS binary — P1 FD exhaustion self-heals on startup
+- **bearDog team**: Ship `decode_mito_tag` + `encode_mito_tag` to activate Tier 2 fleet-wide
+- **cellMembrane team**: Implement `depot.*` methods — graph executor now dispatches them
+- **blueGate builder**: Rebuild biomeOS with `3dfb721b`, run `depot_lineage_batch` after next vertebrate build
