@@ -168,6 +168,8 @@ capabilities = [
 "content.get" = { provider = "nestgate", method = "content.get" }
 "content.exists" = { provider = "nestgate", method = "content.exists" }
 "content.list" = { provider = "nestgate", method = "content.list" }
+"content.stat" = { provider = "nestgate", method = "content.stat" }
+"content.ingest" = { provider = "nestgate", method = "content.ingest" }
 "content.publish" = { provider = "nestgate", method = "content.publish" }
 "content.resolve" = { provider = "nestgate", method = "content.resolve" }
 "content.promote" = { provider = "nestgate", method = "content.promote" }
@@ -780,6 +782,11 @@ capabilities = [
 "dag.get_slice" = { provider = "rhizocrypt", method = "get_slice" }
 "dag.health" = { provider = "rhizocrypt", method = "health" }
 "dag.metrics" = { provider = "rhizocrypt", method = "metrics" }
+"dag.event.append" = { provider = "rhizocrypt", method = "dag.event.append" }
+"dag.event.append_batch" = { provider = "rhizocrypt", method = "dag.event.append_batch" }
+"dag.query" = { provider = "rhizocrypt", method = "dag.query" }
+"dag.session.create" = { provider = "rhizocrypt", method = "dag.session.create" }
+"dag.dehydration.trigger" = { provider = "rhizocrypt", method = "dag.dehydration.trigger" }
 
 [domains.permanent_storage]
 provider = "loamspine"
@@ -812,6 +819,10 @@ capabilities = [
 "permanent-storage.verifyCommit" = { provider = "loamspine", method = "permanent-storage.verifyCommit" }
 "permanent-storage.getCommit" = { provider = "loamspine", method = "permanent-storage.getCommit" }
 "permanent-storage.healthCheck" = { provider = "loamspine", method = "permanent-storage.healthCheck" }
+"spine.list" = { provider = "loamspine", method = "spine.list" }
+"spine.status" = { provider = "loamspine", method = "spine.status" }
+"session.commit" = { provider = "loamspine", method = "session.commit" }
+"entry.list" = { provider = "loamspine", method = "entry.list" }
 
 [domains.attribution]
 provider = "sweetgrass"
@@ -857,6 +868,8 @@ capabilities = [
 "braid.batch_create" = { provider = "sweetgrass", method = "braid.batch_create" }
 "braid.batch_commit" = { provider = "sweetgrass", method = "braid.batch_commit" }
 "braid.sync" = { provider = "sweetgrass", method = "braid.sync" }
+"braid.verify" = { provider = "sweetgrass", method = "braid.verify" }
+"convergence.check" = { provider = "sweetgrass", method = "convergence.check" }
 
 # ------------------------------------------------------------------------------
 # Compute Dispatch Domain (ToadStool — Sub-Frame GPU Protocol)
@@ -1177,7 +1190,9 @@ capabilities = [
 "composition.test_swap" = { provider = "primalspring", method = "composition.test_swap" }
 "composition.validate" = { provider = "primalspring", method = "composition.validate" }
 # Convergence checks — primalSpring validates braid consistency across provenance trio
-"convergence.check" = { provider = "primalspring", method = "convergence.check" }
+# NOTE: convergence.check routes to sweetGrass (direct primal method), not primalspring
+# primalSpring convergence uses the integration.* namespace instead
+"convergence.validate" = { provider = "primalspring", method = "convergence.check" }
 "convergence.batch_check" = { provider = "primalspring", method = "convergence.batch_check" }
 
 # ------------------------------------------------------------------------------
