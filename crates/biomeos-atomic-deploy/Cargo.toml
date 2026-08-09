@@ -37,6 +37,7 @@ chrono = { workspace = true }
 futures-util = { workspace = true }
 uuid = { workspace = true }  # For request ID generation
 toml = { workspace = true }  # For Neural API graph parsing
+hex = { workspace = true }  # For mito-tag hex encoding (riboCipher Tier 2)
 redb = { workspace = true }  # Persistent routing weights (ecoBin compliant)
 dashmap = { workspace = true }  # Lock-free runtime capability → provider registry
 

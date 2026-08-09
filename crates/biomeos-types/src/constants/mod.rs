@@ -586,6 +586,54 @@ pub mod ribocipher {
     pub const fn is_signal_byte(byte: u8) -> bool {
         matches!(byte, SIGNAL_CLEAR | SIGNAL_MITO | SIGNAL_NUCLEAR)
     }
+
+    /// Parsed riboCipher transport tier with version.
+    ///
+    /// Tier 1 (Clear): Standard JSON-RPC, no obfuscation. BTSP handshake follows.
+    /// Tier 2 (Mito): XOR-scrambled framing. Requires `decode_mito_tag` validation
+    ///   from bearDog before BTSP proceeds. Defense-in-depth on shared networks.
+    /// Tier 3 (Nuclear): Full AEAD encryption (ChaCha20-Poly1305) after key exchange.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum RiboCipherTier {
+        /// Tier 1: cleartext JSON-RPC with optional BTSP authentication.
+        Clear,
+        /// Tier 2: mito-obfuscated framing — requires tag decode before BTSP.
+        Mito,
+        /// Tier 3: full AEAD-sealed channel (future).
+        Nuclear,
+    }
+
+    impl RiboCipherTier {
+        /// Parse a raw signal byte into a typed tier.
+        #[inline]
+        pub const fn from_signal(byte: u8) -> Option<Self> {
+            match byte {
+                SIGNAL_CLEAR => Some(Self::Clear),
+                SIGNAL_MITO => Some(Self::Mito),
+                SIGNAL_NUCLEAR => Some(Self::Nuclear),
+                _ => None,
+            }
+        }
+
+        /// Whether this tier requires mito-tag validation before BTSP proceeds.
+        #[inline]
+        pub const fn requires_mito_validation(self) -> bool {
+            matches!(self, Self::Mito | Self::Nuclear)
+        }
+
+        /// The raw signal byte for this tier.
+        #[inline]
+        pub const fn signal_byte(self) -> u8 {
+            match self {
+                Self::Clear => SIGNAL_CLEAR,
+                Self::Mito => SIGNAL_MITO,
+                Self::Nuclear => SIGNAL_NUCLEAR,
+            }
+        }
+    }
+
+    /// Mito-tag length: 32 bytes (BLAKE3 hash of the family seed, XOR-masked).
+    pub const MITO_TAG_LEN: usize = 32;
 }
 
 /// Re-export commonly used constants at module level

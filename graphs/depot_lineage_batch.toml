@@ -1,0 +1,131 @@
+# Depot Lineage Batch Graph — G69 Multi-Binary Lineage
+#
+# Wraps depot_lineage.toml for batch processing: after a full vertebrate build
+# (14/14 primals × N architectures), this graph processes the BLAKE3SUMS
+# manifest and records lineage for each binary.
+#
+# Flow:
+#   1. Parse BLAKE3SUMS file → extract (primal, hash, size, arch) tuples
+#   2. For each binary: sign → spine append → braid → optional CAS
+#   3. Seal the depot spine with a batch commit (wave-level checkpoint)
+#
+# This is the graph blueGate's build pipeline invokes after `builder.serve`
+# completes a full build cycle.
+#
+# Required input variables:
+#   ${BLAKE3SUMS_PATH}  — path to BLAKE3SUMS manifest file
+#   ${ARCH}             — target architecture for this batch
+#   ${BUILDER_GATE}     — gate that performed the build
+#   ${WAVE}             — wave identifier
+#   ${FAMILY_ID}        — ecoPrimals family ID
+#   ${COMMIT_SHA}       — source commit for the build
+#
+# Required: Tower (BearDog) + LoamSpine + sweetGrass
+# Optional: NestGate (binary CAS storage)
+
+[graph]
+id = "depot_lineage_batch"
+version = "1.0.0"
+description = "G69 batch depot lineage: process BLAKE3SUMS manifest and record provenance for all binaries"
+coordination = "Sequential"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: VERIFY STACK + PARSE MANIFEST
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "verify-stack"
+capabilities = ["crypto", "permanent_storage", "attribution"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "health.check"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "parse-manifest"
+depends_on = ["verify-stack"]
+output = "binary_entries"
+
+[nodes.operation]
+name = "local_exec"
+
+[nodes.operation.params]
+command = "parse_blake3sums"
+args = { path = "${BLAKE3SUMS_PATH}", arch = "${ARCH}" }
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: FOR EACH BINARY — SIGN + SPINE + BRAID
+# The graph executor iterates `binary_entries` and executes depot_lineage.toml
+# for each entry, substituting per-binary variables.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "lineage-each"
+depends_on = ["parse-manifest"]
+output = "lineage_results"
+
+[nodes.operation]
+name = "graph_foreach"
+
+[nodes.operation.params]
+graph = "depot_lineage"
+items = "${BINARY_ENTRIES}"
+bind = { PRIMAL_NAME = "item.primal", BINARY_HASH = "item.hash", BINARY_SIZE = "item.size", ARCH = "${ARCH}", BUILDER_GATE = "${BUILDER_GATE}", WAVE = "${WAVE}", COMMIT_SHA = "${COMMIT_SHA}", FAMILY_ID = "${FAMILY_ID}" }
+concurrency = 4
+
+[nodes.constraints]
+timeout_ms = 300000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: SEAL BATCH — WAVE-LEVEL CHECKPOINT
+# After all individual lineage entries are committed, seal the depot spine
+# with a wave-level checkpoint. This creates a "release point" in the spine
+# that downstream gates can verify against.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "seal-batch"
+depends_on = ["lineage-each"]
+output = "seal_ref"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "spine.seal"
+params = { spine_id = "depot:batch:${ARCH}", seal_metadata = { wave = "${WAVE}", builder = "${BUILDER_GATE}", binary_count = "${LINEAGE_RESULTS.count}", commit = "${COMMIT_SHA}", timestamp = "${NOW}" } }
+
+[nodes.constraints]
+timeout_ms = 15000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: BATCH ATTRIBUTION BRAID
+# A top-level braid that references all individual binary braids, creating
+# a single provenance root for the entire batch build.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "batch-braid"
+depends_on = ["seal-batch"]
+output = "batch_braid_id"
+capabilities = ["attribution"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "braid.create"
+params = { data_hash = "${SEAL_REF}", source = "depot:batch:${ARCH}:wave-${WAVE}", description = "Depot batch lineage: ${ARCH} wave ${WAVE} — ${LINEAGE_RESULTS.count} binaries built by ${BUILDER_GATE}", mime_type = "application/json", size = 0, metadata = { arch = "${ARCH}", wave = "${WAVE}", builder = "${BUILDER_GATE}", commit = "${COMMIT_SHA}", binary_count = "${LINEAGE_RESULTS.count}", seal_ref = "${SEAL_REF}", family_id = "${FAMILY_ID}" } }
+
+[nodes.constraints]
+timeout_ms = 15000

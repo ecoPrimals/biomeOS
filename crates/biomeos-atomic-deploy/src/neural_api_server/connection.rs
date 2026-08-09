@@ -47,9 +47,11 @@ impl NeuralApiServer {
 
     /// Peek for riboCipher transport signal and consume if present.
     ///
-    /// Returns `true` if a valid signal was detected (connection accepted),
-    /// `false` if no signal was found (connection rejected per Wave 113 policy).
-    async fn consume_ribocipher_signal<S>(reader: &mut BufReader<S>) -> bool
+    /// Returns the detected `RiboCipherTier` if a valid signal was found,
+    /// or `None` if no signal was present (plain JSON-RPC connection).
+    async fn consume_ribocipher_signal<S>(
+        reader: &mut BufReader<S>,
+    ) -> Option<biomeos_types::constants::ribocipher::RiboCipherTier>
     where
         S: tokio::io::AsyncRead + Unpin,
     {
@@ -59,17 +61,73 @@ impl NeuralApiServer {
             Ok(buf)
                 if buf.len() >= ribocipher::SIGNAL_LEN && ribocipher::is_signal_byte(buf[0]) =>
             {
-                let tier = buf[0];
+                let tier_byte = buf[0];
                 let version = buf[1];
                 reader.consume(ribocipher::SIGNAL_LEN);
-                debug!("riboCipher signal: tier=0x{tier:02X} version={version}");
-                true
+                let tier = ribocipher::RiboCipherTier::from_signal(tier_byte)?;
+                debug!("riboCipher signal: tier={tier:?} version={version}");
+                Some(tier)
             }
             _ => {
                 debug!(
                     "Connection without riboCipher signal — \
                      protocol negotiation fallback (Wave 113)"
                 );
+                None
+            }
+        }
+    }
+
+    /// Validate a mito-tag for Tier 2 connections.
+    ///
+    /// Reads the 32-byte mito-tag from the stream and calls `crypto.decode_mito_tag`
+    /// via the capability dispatch path. Returns `true` if the tag is valid.
+    ///
+    /// If bearDog hasn't registered `decode_mito_tag` yet, this falls through to
+    /// accept the connection (graceful degradation — Tier 2 validation is defense-in-depth).
+    async fn validate_mito_tag<S>(&self, reader: &mut BufReader<S>) -> bool
+    where
+        S: tokio::io::AsyncRead + Unpin,
+    {
+        use biomeos_types::constants::ribocipher;
+
+        let mut tag_buf = [0u8; ribocipher::MITO_TAG_LEN];
+        match tokio::io::AsyncReadExt::read_exact(reader, &mut tag_buf).await {
+            Ok(_) => {
+                let tag_hex = hex::encode(tag_buf);
+                debug!(tag = %tag_hex, "Mito-tag received, requesting decode");
+
+                let params = serde_json::json!({
+                    "capability": "crypto.decode_mito_tag",
+                    "args": { "tag": tag_hex }
+                });
+
+                match self.capability_handler.call(&Some(params)).await {
+                    Ok(outcome) => {
+                        let valid = outcome
+                            .result
+                            .as_object()
+                            .and_then(|o| o.get("valid"))
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+                        if valid {
+                            debug!("Mito-tag validated successfully");
+                        } else {
+                            warn!("Mito-tag validation failed — tag rejected by bearDog");
+                        }
+                        valid
+                    }
+                    Err(e) => {
+                        debug!(
+                            "decode_mito_tag capability unavailable ({e}) — \
+                             graceful degradation, accepting connection"
+                        );
+                        true
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("Failed to read mito-tag from Tier 2 connection: {e}");
                 false
             }
         }
@@ -88,16 +146,27 @@ impl NeuralApiServer {
     ) -> Result<()> {
         let mut reader = BufReader::new(stream);
 
-        // riboCipher transport signal detection (Wave 113).
-        // When not enforcing (btsp_optional), accept plain JSON-RPC connections
-        // without riboCipher prefix — enables cellMembrane composition.test_swap
-        // and other intra-gate plain JSON-RPC callers.
-        if !Self::consume_ribocipher_signal(&mut reader).await {
-            if enforce {
-                return Ok(());
+        // riboCipher transport signal detection (Wave 113+).
+        // Returns the tier or None for plain connections.
+        let tier = Self::consume_ribocipher_signal(&mut reader).await;
+
+        match tier {
+            None => {
+                if enforce {
+                    return Ok(());
+                }
+                debug!("Accepting plain connection (BTSP not enforced) — trying G65 negotiation");
+                return self.handle_with_negotiation(reader).await;
             }
-            debug!("Accepting plain connection (BTSP not enforced) — trying G65 negotiation");
-            return self.handle_with_negotiation(reader).await;
+            Some(ribocipher_tier) => {
+                // Tier 2 (Mito): validate mito-tag before BTSP proceeds
+                if ribocipher_tier.requires_mito_validation() {
+                    if !self.validate_mito_tag(&mut reader).await {
+                        warn!("Tier 2 mito-tag validation failed — dropping connection");
+                        return Ok(());
+                    }
+                }
+            }
         }
 
         match btsp_client::server_handshake(&mut reader).await {
@@ -173,13 +242,22 @@ impl NeuralApiServer {
     ///
     /// TCP connections without riboCipher are accepted when `btsp_optional` is set,
     /// enabling plain JSON-RPC callers (cellMembrane, cross-gate tools).
+    /// Tier 2 (Mito) connections have mito-tag validated before proceeding.
     pub async fn handle_tcp_connection(&self, stream: tokio::net::TcpStream) -> Result<()> {
         let mut reader = BufReader::new(stream);
-        if !Self::consume_ribocipher_signal(&mut reader).await {
-            if !self.btsp_optional {
-                return Ok(());
+        match Self::consume_ribocipher_signal(&mut reader).await {
+            None => {
+                if !self.btsp_optional {
+                    return Ok(());
+                }
+                debug!("Accepting plain JSON-RPC TCP connection (BTSP not enforced)");
             }
-            debug!("Accepting plain JSON-RPC TCP connection (BTSP not enforced)");
+            Some(tier) => {
+                if tier.requires_mito_validation() && !self.validate_mito_tag(&mut reader).await {
+                    warn!("TCP Tier 2 mito-tag validation failed — dropping connection");
+                    return Ok(());
+                }
+            }
         }
         self.handle_stream(reader).await
     }

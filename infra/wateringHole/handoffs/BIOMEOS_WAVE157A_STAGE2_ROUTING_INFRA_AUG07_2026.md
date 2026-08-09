@@ -206,3 +206,47 @@ Two compounding issues caused 14→58K FD accumulation per `capability.call`:
 - **sporeGate**: Rebuild biomeOS binary with `6a51638d` and push to golgi depot
 - **All gates**: Pull new biomeOS binary — FD exhaustion resolved
 - **barraCuda team**: When ready, wire `with_remote_infer` to barraCuda's **direct socket** (not Neural API self-socket) for production L5 remote inference
+
+---
+
+## Addendum 8: G69 Depot Lineage + riboCipher Tier 2 (Aug 9, 2026)
+
+**Scope**: Provenance graph templates + riboCipher Phase 2 evolution (Wave 157d)
+
+### 1. G69 Depot Lineage Graph Templates
+
+Created two graph templates for binary evolution tracking via the provenance trio:
+
+| File | Purpose |
+|------|---------|
+| `graphs/depot_lineage.toml` | Single-binary provenance: BLAKE3 → sign → spine append → attribution braid → optional CAS |
+| `graphs/depot_lineage_batch.toml` | Batch processing: parse BLAKE3SUMS manifest → foreach depot_lineage → seal spine → batch braid |
+
+These implement the G69 specification: binary depot evolution tracked via the same CAS/spine/braid pattern as data braids. Any binary can now be traced back to its build gate, source commit, wave, and full commit spine history.
+
+**Capability routing added**: `depot_lineage` domain registered in `capability_registry.toml` → routes to cellMembrane (`depot.record_lineage`, `depot.verify_lineage`, `depot.query_lineage`, `depot.prune`, `depot.seal_batch`, `depot.get_manifest`).
+
+### 2. riboCipher Tier 2 Server-Side Routing
+
+Evolved the Neural API connection handler from simple bool detection to tier-aware routing:
+
+| File | Change |
+|------|--------|
+| `biomeos-types/src/constants/mod.rs` | Added `RiboCipherTier` enum (Clear/Mito/Nuclear) with `from_signal()`, `requires_mito_validation()`, `signal_byte()`. Added `MITO_TAG_LEN = 32`. |
+| `neural_api_server/connection.rs` | `consume_ribocipher_signal` now returns `Option<RiboCipherTier>`. Added `validate_mito_tag()` — reads 32-byte tag, calls `crypto.decode_mito_tag`. Tier 2 connections must pass mito-tag validation before BTSP proceeds. Graceful degradation if bearDog not yet available. |
+| `biomeos-atomic-deploy/Cargo.toml` | Added `hex` dependency for mito-tag encoding. |
+| `config/capability_registry.toml` | Added `crypto.decode_mito_tag` and `crypto.encode_mito_tag` → bearDog. |
+
+**Flow**: Client sends `[0xED, 0x01]` → server detects Tier 2 → reads 32-byte mito-tag → calls `crypto.decode_mito_tag` via capability dispatch → if valid, proceeds to BTSP handshake. If bearDog hasn't registered `decode_mito_tag` yet, falls through gracefully (defense-in-depth, not blocking).
+
+### Upstream Actions
+
+- **bearDog team**: Implement `decode_mito_tag` and `encode_mito_tag` methods. Expected input: `{ "tag": "<64-char hex>" }`. Expected output: `{ "valid": bool, "family_id": "...", "nonce": "..." }`.
+- **cellMembrane team**: Implement `depot.record_lineage`, `depot.verify_lineage`, `depot.query_lineage` methods to support G69 graph execution.
+- **blueGate builder**: After next build, run `depot_lineage_batch` graph to establish lineage spine for all 14 vertebrate binaries.
+
+### Verification
+
+- `cargo check`: clean
+- `cargo test`: 578 passed, 0 failed
+- `cargo clippy`: 1 pre-existing warning (toml_loader iteration)

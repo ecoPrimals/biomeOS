@@ -65,6 +65,12 @@ capabilities = [
 "security.generate_jwt" = { provider = "beardog", method = "generate_jwt_secret" }
 "security.verify_jwt" = { provider = "beardog", method = "verify_jwt" }
 
+# riboCipher Tier 2 — Mito-tag decode and validation (G69 / Wave 157d)
+# bearDog decodes XOR-masked mito-tags for per-connection Tier 2 authentication.
+# biomeOS Neural API calls this on Tier 2 connections before BTSP proceeds.
+"crypto.decode_mito_tag" = { provider = "beardog", method = "decode_mito_tag" }
+"crypto.encode_mito_tag" = { provider = "beardog", method = "encode_mito_tag" }
+
 # ------------------------------------------------------------------------------
 # Genetic Domain (BearDog)
 # Lineage derivation, entropy mixing, lineage verification and proof generation.
@@ -1220,6 +1226,30 @@ capabilities = [
 "rootpulse.commit" = { provider = "rootpulse", method = "rootpulse.commit" }
 "rootpulse.status" = { provider = "rootpulse", method = "rootpulse.status" }
 "rootpulse.health" = { provider = "rootpulse", method = "rootpulse.health" }
+
+# ------------------------------------------------------------------------------
+# Depot Lineage Domain (G69 — Wave 157d)
+# Binary evolution tracking via the provenance trio: CAS identity (BLAKE3),
+# spine commit history (loamSpine), attribution braids (sweetGrass).
+# Used by depot_lineage.toml and depot_lineage_batch.toml graph templates.
+# Provider: cellMembrane owns depot pipeline; actual spine/braid calls
+# route through loamSpine and sweetGrass respectively.
+# ------------------------------------------------------------------------------
+
+[domains.depot_lineage]
+provider = "cellmembrane"
+capabilities = [
+    "depot_lineage",
+    "depot",
+]
+
+[translations.depot_lineage]
+"depot.record_lineage" = { provider = "cellmembrane", method = "depot.record_lineage" }
+"depot.verify_lineage" = { provider = "cellmembrane", method = "depot.verify_lineage" }
+"depot.query_lineage" = { provider = "cellmembrane", method = "depot.query_lineage" }
+"depot.prune" = { provider = "cellmembrane", method = "depot.prune" }
+"depot.seal_batch" = { provider = "cellmembrane", method = "depot.seal_batch" }
+"depot.get_manifest" = { provider = "cellmembrane", method = "depot.get_manifest" }
 
 # ------------------------------------------------------------------------------
 # Cell Composition Domains (esotericWebb, footPrint, tideGlass)

@@ -362,6 +362,7 @@ dependencies = [
  "chrono",
  "dashmap",
  "futures-util",
+ "hex",
  "rand 0.9.5",
  "redb",
  "rustix",

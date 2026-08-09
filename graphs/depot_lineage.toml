@@ -1,0 +1,165 @@
+# Depot Lineage Graph — G69 Binary Evolution via Provenance Trio
+#
+# Tracks a primal binary through the full provenance chain:
+#   1. Build produces binary → BLAKE3 content hash (CAS identity)
+#   2. Sign the hash (bearDog) → Ed25519 signature
+#   3. Append to spine (loamSpine) → linear commit history per primal
+#   4. Create attribution braid (sweetGrass) → builder + gate + wave metadata
+#
+# This is the same CAS/spine/braid pattern used for data braids, applied to
+# binary depot evolution. Enables G69 depot lineage: any binary can be traced
+# back to its build, signer, and full commit history.
+#
+# Required input variables:
+#   ${PRIMAL_NAME}   — name of the primal being tracked (e.g. "beardog")
+#   ${BINARY_HASH}   — BLAKE3 hash of the built binary
+#   ${BINARY_SIZE}   — size in bytes
+#   ${ARCH}          — target architecture (e.g. "x86_64-unknown-linux-musl")
+#   ${BUILDER_GATE}  — gate that performed the build (e.g. "blueGate")
+#   ${WAVE}          — wave identifier (e.g. "157d")
+#   ${COMMIT_SHA}    — source commit that produced this binary
+#   ${FAMILY_ID}     — ecoPrimals family ID
+#
+# Required: Tower (BearDog) + LoamSpine + sweetGrass
+# Optional: NestGate (binary CAS storage)
+
+[graph]
+id = "depot_lineage"
+version = "1.0.0"
+description = "G69 depot lineage: track binary evolution through CAS/spine/braid provenance trio"
+coordination = "Sequential"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: VERIFY PROVENANCE STACK HEALTH
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "verify-crypto"
+capabilities = ["crypto"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "health.check"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 3000
+
+[[nodes]]
+id = "verify-permanence"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "health.check"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 3000
+
+[[nodes]]
+id = "verify-attribution"
+capabilities = ["attribution"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "health.check"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 3000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: SIGN THE BINARY HASH
+# Produces an Ed25519 signature over the BLAKE3 content hash.
+# This binds the binary's identity to a cryptographic attestation.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "sign-binary"
+depends_on = ["verify-crypto"]
+output = "signature"
+capabilities = ["crypto"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "crypto.sign"
+params = { message = "${BINARY_HASH}" }
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: APPEND TO PRIMAL SPINE
+# Each primal has a dedicated spine (linear commit history). Appending an entry
+# records: binary hash, signature, architecture, source commit, wave, builder.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "append-spine"
+depends_on = ["sign-binary", "verify-permanence"]
+output = "spine_entry_id"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "entry.append"
+params = { spine_id = "depot:${PRIMAL_NAME}", payload = { binary_hash = "${BINARY_HASH}", signature = "${SIGNATURE}", arch = "${ARCH}", commit = "${COMMIT_SHA}", builder = "${BUILDER_GATE}", wave = "${WAVE}", size_bytes = "${BINARY_SIZE}", timestamp = "${NOW}" } }
+
+[nodes.constraints]
+timeout_ms = 15000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: CREATE ATTRIBUTION BRAID
+# Links the spine entry to provenance metadata: who built it, where, when,
+# and from what source. Enables depot-wide queries via sweetGrass.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "create-braid"
+depends_on = ["append-spine", "verify-attribution"]
+output = "braid_id"
+capabilities = ["attribution"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "braid.create"
+params = { data_hash = "${BINARY_HASH}", source = "depot:${PRIMAL_NAME}:${ARCH}", description = "Depot lineage: ${PRIMAL_NAME} ${ARCH} wave ${WAVE} built by ${BUILDER_GATE} from ${COMMIT_SHA}", mime_type = "application/octet-stream", size = "${BINARY_SIZE}", metadata = { primal = "${PRIMAL_NAME}", arch = "${ARCH}", wave = "${WAVE}", builder = "${BUILDER_GATE}", commit = "${COMMIT_SHA}", spine_entry = "${SPINE_ENTRY_ID}", family_id = "${FAMILY_ID}" } }
+
+[nodes.constraints]
+timeout_ms = 15000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 5: OPTIONAL CAS STORAGE (NestGate)
+# If NestGate is available, store the binary in content-addressed storage.
+# This makes the binary retrievable by hash from any gate in the mesh.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "cas-store"
+depends_on = ["sign-binary"]
+output = "cas_address"
+capabilities = ["storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "content.ingest"
+params = { hash = "${BINARY_HASH}", key = "depot/${PRIMAL_NAME}/${ARCH}/${BINARY_HASH}", family_id = "${FAMILY_ID}", metadata = { primal = "${PRIMAL_NAME}", arch = "${ARCH}", wave = "${WAVE}" } }
+
+[nodes.constraints]
+timeout_ms = 60000
+optional = true
