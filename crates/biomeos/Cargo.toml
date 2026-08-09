@@ -44,7 +44,7 @@ toml = { workspace = true }
 chrono = { workspace = true }
 
 # System info for doctor mode (pure Rust via /proc - ecoBin v3)
-rustix = { workspace = true, features = ["fs"] }
+rustix = { workspace = true, features = ["fs", "process"] }
 
 # Formatting
 colored = { workspace = true }

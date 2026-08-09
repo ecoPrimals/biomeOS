@@ -159,6 +159,58 @@ impl ConnectionPool {
         plain + rc
     }
 
+    /// Send a JSON-RPC request with riboCipher **Tier 2** (mito-obfuscated) framing.
+    ///
+    /// Writes `[0xED, 0x01]` signal + 32-byte mito-tag on fresh connections.
+    /// The mito-tag authenticates the client to the server (decoded by bearDog).
+    /// Pooled connections already performed the handshake on initial use.
+    ///
+    /// Falls back to Tier 1 (`send_ribocipher_jsonrpc`) if `mito_tag` is None —
+    /// callers should attempt to encode a tag via `crypto.encode_mito_tag` but
+    /// gracefully degrade if bearDog is unavailable.
+    pub async fn send_mito_jsonrpc(
+        &self,
+        endpoint: &TransportEndpoint,
+        request: biomeos_types::JsonRpcRequest,
+        mito_tag: Option<&[u8; biomeos_types::constants::ribocipher::MITO_TAG_LEN]>,
+    ) -> anyhow::Result<biomeos_types::JsonRpcResponse> {
+        let Some(tag) = mito_tag else {
+            return self.send_ribocipher_jsonrpc(endpoint, request).await;
+        };
+
+        let key = format!("mito:{endpoint}");
+        let request_bytes = serde_json::to_vec(&request)?;
+
+        if let Some(stream) = Self::take_from(&self.inner_ribocipher, &key) {
+            match Self::send_over(stream, &request_bytes).await {
+                Ok((response, stream)) => {
+                    Self::put_into(&self.inner_ribocipher, &key, stream);
+                    return Ok(response);
+                }
+                Err(_) => {
+                    trace!("Pooled mito connection stale for {key}, reconnecting");
+                }
+            }
+        }
+
+        let mut stream = super::connect_transport(endpoint)
+            .await
+            .map_err(|e| anyhow::anyhow!("Failed to connect to {endpoint}: {e}"))?;
+
+        stream
+            .write_all(&[
+                biomeos_types::constants::ribocipher::SIGNAL_MITO,
+                biomeos_types::constants::ribocipher::VERSION_1,
+            ])
+            .await?;
+        stream.write_all(tag).await?;
+        stream.flush().await?;
+
+        let (response, stream) = Self::send_over(stream, &request_bytes).await?;
+        Self::put_into(&self.inner_ribocipher, &key, stream);
+        Ok(response)
+    }
+
     /// Number of idle plain connections.
     #[must_use]
     pub fn idle_plain_count(&self) -> usize {

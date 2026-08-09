@@ -15,6 +15,7 @@ use anyhow::{Context, Result};
 use biomeos_types::JsonRpcRequest;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tokio::time::{timeout, Duration, Instant};
@@ -515,5 +516,283 @@ pub fn substitute_env(s: &str, env: &HashMap<String, String>) -> String {
     }
 
     result
+}
+
+/// Generic capability_call executor (G69 evolution).
+///
+/// Routes any capability through the Neural API's `capability.call` dispatch path.
+/// This enables graph templates to invoke arbitrary capabilities without requiring
+/// hardcoded handlers in the executor. Used by depot_lineage.toml and all provenance
+/// graphs that compose capability chains.
+///
+/// Params are read from `node.config`:
+/// - `capability`: dotted capability name (e.g., "crypto.sign", "entry.append")
+/// - `args`: arguments for the capability operation (JSON object)
+/// - `operation`: optional explicit operation name (if not in dotted capability)
+pub async fn node_capability_call(
+    node: &GraphNode,
+    context: &ExecutionContext,
+) -> Result<serde_json::Value> {
+    let capability = node
+        .config
+        .get("capability")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!(
+            "Generic capability_call node '{}' missing 'capability' in config",
+            node.id
+        ))?;
+
+    let args = node
+        .config
+        .get("args")
+        .cloned()
+        .or_else(|| node.config.get("params").cloned())
+        .unwrap_or(serde_json::json!({}));
+
+    let operation = node.config.get("operation").and_then(|v| v.as_str());
+
+    let neural_socket = discover_neural_api_socket(&context.env)?;
+
+    let env = &context.env;
+    let args_str = serde_json::to_string(&args).unwrap_or_default();
+    let args_substituted: serde_json::Value =
+        serde_json::from_str(&substitute_env(&args_str, env)).unwrap_or(args);
+
+    let mut call_params = serde_json::json!({
+        "capability": capability,
+        "args": args_substituted
+    });
+
+    if let Some(op) = operation {
+        call_params["operation"] = serde_json::Value::String(op.to_string());
+    }
+
+    let request = JsonRpcRequest::new("capability.call", call_params);
+
+    debug!(
+        "Generic capability_call: {} via Neural API at {neural_socket}",
+        capability
+    );
+
+    let response = call_neural_api(&neural_socket, &request)
+        .await
+        .context(format!(
+            "capability.call({capability}) via Neural API failed for node '{}'",
+            node.id
+        ))?;
+
+    if let Some(error) = response.get("error") {
+        let message = error
+            .get("message")
+            .and_then(|m| m.as_str())
+            .unwrap_or("Unknown error");
+        let code = error.get("code").and_then(|c| c.as_i64()).unwrap_or(-32000);
+        anyhow::bail!("capability.call({capability}) error {code}: {message}");
+    }
+
+    response
+        .get("result")
+        .cloned()
+        .ok_or_else(|| anyhow::anyhow!(
+            "capability.call({capability}) returned no result for node '{}'",
+            node.id
+        ))
+}
+
+/// Generic health_check executor (G69 evolution).
+///
+/// Routes a health check through the Neural API for any named primal.
+/// Supports the `health_check` operation name used in depot_lineage and
+/// provenance_trio_deploy graphs.
+pub async fn node_generic_health_check(
+    node: &GraphNode,
+    context: &ExecutionContext,
+) -> Result<serde_json::Value> {
+    let primal_name = node
+        .config
+        .get("primal_name")
+        .or_else(|| node.config.get("primal"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown");
+
+    let family_id = resolve_family_id(&context.env);
+    let socket_path = build_socket_path(primal_name, &family_id, &context.env);
+
+    if !std::path::Path::new(&socket_path).exists() {
+        return Ok(serde_json::json!({
+            "healthy": false,
+            "primal": primal_name,
+            "error": format!("Socket not found: {socket_path}")
+        }));
+    }
+
+    match ping_primal(&socket_path).await {
+        Ok(ms) => Ok(serde_json::json!({
+            "healthy": true,
+            "primal": primal_name,
+            "response_time_ms": ms
+        })),
+        Err(e) => Ok(serde_json::json!({
+            "healthy": false,
+            "primal": primal_name,
+            "error": e.to_string()
+        })),
+    }
+}
+
+/// Graph foreach executor (G69 batch lineage).
+///
+/// Iterates over a list of items and executes a sub-graph for each one.
+/// Supports bounded concurrency via `config.concurrency`.
+///
+/// Config:
+/// - `graph`: sub-graph filename to execute for each item (e.g., "depot_lineage")
+/// - `items`: variable name containing the list to iterate (resolved from context outputs)
+/// - `concurrency`: max parallel executions (default: 1)
+/// - `bind`: variable mapping from item fields to sub-graph env vars
+pub async fn node_graph_foreach(
+    node: &GraphNode,
+    context: &ExecutionContext,
+) -> Result<serde_json::Value> {
+    let graph_name = node
+        .config
+        .get("graph")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!(
+            "graph_foreach node '{}' missing 'graph' in config",
+            node.id
+        ))?;
+
+    let items_ref = node
+        .config
+        .get("items")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!(
+            "graph_foreach node '{}' missing 'items' in config",
+            node.id
+        ))?;
+
+    let concurrency = node
+        .config
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(1) as usize;
+
+    let items_resolved = substitute_env(items_ref, &context.env);
+    let items: Vec<serde_json::Value> = context
+        .get_output(&items_resolved)
+        .await
+        .and_then(|v| v.as_array().cloned())
+        .unwrap_or_default();
+
+    if items.is_empty() {
+        return Ok(serde_json::json!({
+            "graph": graph_name,
+            "count": 0,
+            "results": []
+        }));
+    }
+
+    info!(
+        "graph_foreach: executing '{}' for {} items (concurrency={})",
+        graph_name,
+        items.len(),
+        concurrency
+    );
+
+    let bind_map = node
+        .config
+        .get("bind")
+        .and_then(|v| v.as_object())
+        .cloned()
+        .unwrap_or_default();
+
+    let neural_socket = discover_neural_api_socket(&context.env)?;
+    let semaphore = Arc::new(tokio::sync::Semaphore::new(concurrency));
+
+    let mut handles = Vec::new();
+
+    for (idx, item) in items.iter().enumerate() {
+        let sem = semaphore.clone();
+        let neural_socket = neural_socket.clone();
+        let bind_map = bind_map.clone();
+        let item = item.clone();
+        let graph_name = graph_name.to_string();
+        let base_env = context.env.clone();
+
+        let handle = tokio::spawn(async move {
+            let _permit = sem.acquire().await;
+
+            let mut env = base_env;
+            for (env_key, bind_expr) in &bind_map {
+                if let Some(field) = bind_expr.as_str() {
+                    let value = if let Some(stripped) = field.strip_prefix("item.") {
+                        item.get(stripped)
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string()
+                    } else {
+                        field.to_string()
+                    };
+                    env.insert(env_key.clone(), value);
+                }
+            }
+
+            let request = JsonRpcRequest::new(
+                "graph.execute",
+                serde_json::json!({
+                    "graph": graph_name,
+                    "env": env
+                }),
+            );
+
+            match call_neural_api(&neural_socket, &request).await {
+                Ok(response) => {
+                    if let Some(result) = response.get("result") {
+                        (idx, Ok(result.clone()))
+                    } else if let Some(error) = response.get("error") {
+                        let msg = error.get("message")
+                            .and_then(|m| m.as_str())
+                            .unwrap_or("sub-graph error");
+                        (idx, Err(msg.to_string()))
+                    } else {
+                        (idx, Ok(serde_json::json!({"ok": true})))
+                    }
+                }
+                Err(e) => (idx, Err(e.to_string())),
+            }
+        });
+
+        handles.push(handle);
+    }
+
+    let mut results = Vec::new();
+    let mut succeeded = 0usize;
+    let mut failed = 0usize;
+
+    for handle in handles {
+        match handle.await {
+            Ok((idx, Ok(result))) => {
+                succeeded += 1;
+                results.push(serde_json::json!({ "index": idx, "status": "ok", "result": result }));
+            }
+            Ok((idx, Err(e))) => {
+                failed += 1;
+                results.push(serde_json::json!({ "index": idx, "status": "error", "error": e }));
+            }
+            Err(e) => {
+                failed += 1;
+                results.push(serde_json::json!({ "status": "join_error", "error": e.to_string() }));
+            }
+        }
+    }
+
+    Ok(serde_json::json!({
+        "graph": graph_name,
+        "count": items.len(),
+        "succeeded": succeeded,
+        "failed": failed,
+        "results": results
+    }))
 }
 

@@ -698,6 +698,8 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
     init_logging(&cli.log_level, cli.verbose)?;
 
+    raise_fd_limit();
+
     if let Err(e) = biomeos_core::btsp_client::validate_insecure_guard() {
         anyhow::bail!(e);
     }
@@ -724,6 +726,44 @@ fn init_logging(log_level: &str, verbose: bool) -> Result<()> {
         .ok();
 
     Ok(())
+}
+
+/// Raise the process soft FD limit to 65536 (or hard limit if lower).
+///
+/// P1 fix: several gates don't have `LimitNOFILE=65536` in their systemd units.
+/// Rather than depending on external service configuration, biomeOS raises its own
+/// limit at startup. This is safe: we only raise the soft limit up to the hard limit.
+#[cfg(unix)]
+fn raise_fd_limit() {
+    use rustix::process::{Resource, getrlimit, setrlimit, Rlimit};
+    use tracing::{debug, info, warn};
+
+    const TARGET_NOFILE: u64 = 65536;
+
+    let current = getrlimit(Resource::Nofile);
+    let soft = current.current.unwrap_or(1024);
+    let hard = current.maximum.unwrap_or(TARGET_NOFILE);
+
+    if soft >= TARGET_NOFILE {
+        debug!("FD soft limit already adequate: {soft}");
+        return;
+    }
+
+    let new_soft = TARGET_NOFILE.min(hard);
+    let new_limit = Rlimit {
+        current: Some(new_soft),
+        maximum: current.maximum,
+    };
+
+    match setrlimit(Resource::Nofile, new_limit) {
+        Ok(()) => info!("Raised FD soft limit: {soft} → {new_soft} (hard={hard})"),
+        Err(e) => warn!("Failed to raise FD limit from {soft} to {new_soft}: {e}"),
+    }
+}
+
+#[cfg(not(unix))]
+fn raise_fd_limit() {
+    // Windows/WASM: no-op (FD limits are not a concern on these platforms)
 }
 
 #[cfg(test)]

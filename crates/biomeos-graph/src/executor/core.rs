@@ -211,11 +211,21 @@ pub async fn execute_node(
         }
         Some("primal.launch") => node_handlers::node_primal_launch(node, context).await,
         Some("health.check_atomic") => node_handlers::node_health_check(node, context).await,
+        Some("health.check") | Some("health_check") => {
+            node_handlers::node_generic_health_check(node, context).await
+        }
         Some("lineage.verify_siblings") => {
             node_handlers::node_lineage_verify(node, context).await
         }
         Some("report.deployment_success") => {
             node_handlers::node_deployment_report(node, context).await
+        }
+        Some("graph_foreach") => node_handlers::node_graph_foreach(node, context).await,
+        Some("capability_call") => node_handlers::node_capability_call(node, context).await,
+        Some(cap) if cap.contains('.') => {
+            // Any dotted capability (e.g., "crypto.sign", "entry.append", "braid.create")
+            // routes through the generic capability_call handler via Neural API.
+            node_handlers::node_capability_call(node, context).await
         }
         _ => {
             warn!("Unknown node capability: {:?}, skipping", node.capability);
