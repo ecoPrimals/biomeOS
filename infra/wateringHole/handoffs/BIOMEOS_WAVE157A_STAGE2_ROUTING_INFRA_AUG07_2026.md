@@ -1,6 +1,6 @@
 # biomeOS Wave 157a — Stage 2 Routing Infrastructure Handoff
 
-**Date**: August 7, 2026
+**Date**: August 7-9, 2026
 **Gate**: eastGate (overwatch + biomeOS code team)
 **Wave**: 157a
 **Author**: biomeOS code team (eastGate IDE session)
@@ -169,3 +169,40 @@ capability.call("crypto.sign", ...) → local discovery fails
 - `cargo test --package biomeos-types`: **1,091 passed, 0 failed**
 - `cargo fmt --check`: clean
 - Discovery gossip parser tests: 7/7 pass
+
+---
+
+## Addendum 7: P0-C FD Leak Fix (Aug 9, 2026)
+
+**Commit**: `6a51638d` — `fix(P0-C): eliminate FD leak in auto-discovery dispatch path`
+
+### Root Cause
+
+Two compounding issues caused 14→58K FD accumulation per `capability.call`:
+
+1. **Recursive amplification via `shadow_compare_remote`**: The L5 perceptron was wired with `remote_infer_socket` pointing to the Neural API's **own socket**. Each multi-provider `select_primary` → `shadow_compare_remote` sent `capability.call("ml.mlp_infer")` back to itself, triggering another dispatch cycle → `select_primary` → `shadow_compare_remote` → ∞ recursion. Each recursive level opened fresh unpooled connections (exponential 3^N growth).
+
+2. **Per-dispatch health-check storm**: `try_registry_lookup`, `try_prefix_lookup`, and `discover_by_capability_category` called `check_endpoint_health` for **every provider** on the hot dispatch path (2 unpooled connections each — plain JSON-RPC + BTSP fallback). Combined with recursion above, this multiplied FD creation per call into the thousands.
+
+### Fix Applied
+
+| File | Change |
+|------|--------|
+| `neural_api_server/mod.rs` | Removed self-referential `with_remote_infer(own_socket)`. Perceptron now runs local-only shadow mode until a dedicated barraCuda socket is wired. |
+| `neural_router/perceptron.rs` | Added `tokio::task_local!` re-entrancy guard (`IN_SHADOW_INFER`) — defense-in-depth against future recursive wiring. |
+| `neural_router/discovery_registry.rs` | Removed `check_endpoint_health` from `try_registry_lookup`, `try_prefix_lookup`, and `discover_by_capability_category`. Providers assume healthy on the hot path; liveness is maintained by background `prune_stale_registrations` (60s sweep). |
+| `neural_router/discovery_composite.rs` | Removed `quick_health_check` from `find_primal_by_capability`. |
+| `neural_router/discovery_primal.rs` | Removed `quick_health_check` from `find_primal_by_socket`. Removed dead `quick_health_check` method. |
+
+### After Fix
+
+- `capability.call` opens at most **1 pooled connection** per forward (via `ConnectionPool`)
+- Background sweeps remain unchanged (health checking in `prune_stale_registrations` is the correct path)
+- `cargo check`: clean, `cargo test`: 578 passed, 0 failed
+- FD profile: bounded by `MAX_IDLE_PER_ENDPOINT * num_endpoints` (~60 max idle FDs)
+
+### Upstream Action
+
+- **sporeGate**: Rebuild biomeOS binary with `6a51638d` and push to golgi depot
+- **All gates**: Pull new biomeOS binary — FD exhaustion resolved
+- **barraCuda team**: When ready, wire `with_remote_infer` to barraCuda's **direct socket** (not Neural API self-socket) for production L5 remote inference
