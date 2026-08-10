@@ -59,7 +59,7 @@ async fn serve_tcp_only_initializes_and_responds_to_health_check() {
         assert_eq!(response["result"]["family_id"], "tcp-lifecycle");
         assert_eq!(response["result"]["mode"], "Coordinated");
         assert!(
-            response["result"]["registered_capabilities"]
+            response["result"]["routing"]["registered_capabilities"]
                 .as_u64()
                 .unwrap_or(0)
                 > 0

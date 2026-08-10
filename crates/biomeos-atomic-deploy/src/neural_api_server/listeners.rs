@@ -273,7 +273,7 @@ mod tests {
         assert_eq!(j["version"], env!("CARGO_PKG_VERSION"));
         assert!(j["uptime_s"].as_u64().is_some());
         assert_eq!(j["family_id"], "fam-health");
-        assert_eq!(j["registered_capabilities"], serde_json::json!(0));
+        assert_eq!(j["routing"]["registered_capabilities"], serde_json::json!(0));
     }
 
     #[tokio::test]

@@ -386,3 +386,36 @@ async fn test_handle_request_onion_create_service_mesh_route() {
     let result = server.handle_request_json(req).await;
     assert!(result.get("result").is_some() || result.get("error").is_some());
 }
+
+#[tokio::test]
+async fn test_handle_request_composition_orchestrate_route() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"composition.orchestrate","params":{"composition":"tower"},"id":80}"#;
+    let result = server.handle_request_json(req).await;
+    assert_eq!(result["jsonrpc"], "2.0");
+    assert_eq!(result["id"], 80);
+    let inner = &result["result"];
+    assert_eq!(inner["target"], "tower");
+    assert!(inner["steps"].is_array(), "orchestrate should return steps array");
+}
+
+#[tokio::test]
+async fn test_handle_request_composition_orchestrate_unknown_returns_error() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"composition.orchestrate","params":{"composition":"nonexistent"},"id":81}"#;
+    let result = server.handle_request_json(req).await;
+    let inner = &result["result"];
+    assert!(inner["error"].is_string());
+    assert!(inner["available"].is_array());
+}
+
+#[tokio::test]
+async fn test_handle_request_composition_orchestrate_missing_params() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"composition.orchestrate","params":{},"id":82}"#;
+    let result = server.handle_request_json(req).await;
+    assert!(
+        result.get("error").is_some(),
+        "missing composition param should be an error"
+    );
+}

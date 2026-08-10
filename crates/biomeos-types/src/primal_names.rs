@@ -111,6 +111,12 @@ pub const TIDEGLASS: &str = "tideglass";
 /// swarmVine — epidemic gossip engine for cross-gate mesh intelligence.
 pub const SWARMVINE: &str = "swarmvine";
 
+/// cellMembrane — infrastructure automation, depot management, harvest pipeline.
+pub const CELLMEMBRANE: &str = "cellmembrane";
+
+/// lithoSpore — validation, integrity checking, attestation.
+pub const LITHOSPORE: &str = "lithospore";
+
 // =========================================================================
 // Display names — mixed-case for UI/logs.
 // Absorbed from neuralSpring `primal_names::display`.
@@ -172,6 +178,10 @@ pub mod display {
     pub const TIDEGLASS: &str = "tideGlass";
     /// swarmVine display name.
     pub const SWARMVINE: &str = "swarmVine";
+    /// cellMembrane display name.
+    pub const CELLMEMBRANE: &str = "cellMembrane";
+    /// lithoSpore display name.
+    pub const LITHOSPORE: &str = "lithoSpore";
 
     /// Look up the display name for a lowercase primal identifier.
     #[must_use]
@@ -204,6 +214,8 @@ pub mod display {
             super::FOOTPRINT => Some(FOOTPRINT),
             super::TIDEGLASS => Some(TIDEGLASS),
             super::SWARMVINE => Some(SWARMVINE),
+            super::CELLMEMBRANE => Some(CELLMEMBRANE),
+            super::LITHOSPORE => Some(LITHOSPORE),
             _ => None,
         }
     }
@@ -231,8 +243,16 @@ pub const SPRING_PRIMALS: &[&str] = &[
     LUDOSPRING,
 ];
 
-/// Additional primals — UI, sandbox, compliance, gossip.
-pub const AUXILIARY_PRIMALS: &[&str] = &[PETALTONGUE, SKUNKBAT, SOURDOUGH, PRIMALSPRING, SWARMVINE];
+/// Additional primals — UI, sandbox, compliance, gossip, infra.
+pub const AUXILIARY_PRIMALS: &[&str] = &[
+    PETALTONGUE,
+    SKUNKBAT,
+    SOURDOUGH,
+    PRIMALSPRING,
+    SWARMVINE,
+    CELLMEMBRANE,
+    LITHOSPORE,
+];
 
 // =========================================================================
 // Niche self-knowledge — capabilities that biomeOS itself provides.
@@ -265,7 +285,6 @@ pub fn is_known_primal(name: &str) -> bool {
         || lower == BIOMEOS
         || lower == BIOMEOS_DEVICE_MANAGEMENT
         || lower == ROOTPULSE
-        || lower == SWARMVINE
 }
 
 #[cfg(test)]

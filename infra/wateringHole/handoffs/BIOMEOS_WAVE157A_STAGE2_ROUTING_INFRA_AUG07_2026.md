@@ -352,3 +352,59 @@ Full codebase audit against deep-debt principles:
 - **Songbird team**: Verify `federation.peers` / `federation.status` dispatch without self-prefix
 - **All gates**: Deploy new binary for CLI `nucleus stop/status/deploy/undeploy` support
 - **eastGate operator**: `sudo rm -rf tmp-cloud-init/` (stale local artifact, not git-tracked)
+
+---
+
+## Addendum 11: Multi-Composition Orchestration + G72 Dep Hygiene + Test Fixes
+
+**Date**: 2026-08-10 18:15 EDT
+**Context**: Wave 157g STADIAL SHIFT — G72 Dependency Pandemic + multi-composition workflows.
+
+### G72 Dependency Pandemic — biomeOS Posture
+
+biomeOS is **already exemplary** for G72:
+- **Tokio**: workspace uses `["rt-multi-thread", "macros", "sync", "time"]` — no production `["full"]`. Only `biomeos-test-utils` uses full (acceptable for test infra).
+- **Dead deps**: 0 (indexmap removed in Addendum 10, all workspace deps verified consumed by member crates).
+- **Version alignment**: Modern across the board (axum 0.8, hyper 1.0, thiserror 2, clap 4, rustix 1).
+- **Total dep tree (binary)**: ~574 unique crates — lean for a multi-protocol orchestrator.
+
+No Tier 1 excision needed for biomeOS. biomeOS is the lean reference pattern (like swarmVine @ 113 deps).
+
+### Multi-Composition Orchestration
+
+| File | Change |
+|------|--------|
+| `crates/biomeos-atomic-deploy/src/neural_api_server/route_table.rs` | Added `Route::CompositionOrchestrate` and `"composition.orchestrate"` dispatch entry |
+| `crates/biomeos-atomic-deploy/src/neural_api_server/routing.rs` | Implemented `orchestrate_composition()` — sequences prerequisite compositions with health-gating, executes deploy graphs for each, returns structured trace |
+
+**API**: `composition.orchestrate { composition: "nucleus" }` auto-sequences:
+1. Check tower health → if unhealthy, start tower graph
+2. Check nest health → if unhealthy, start nest graph  
+3. Check node health → if unhealthy, start node graph
+4. Returns `{ target, completed, steps: [...] }` with per-step action/status
+
+Supports: `tower`, `nest` (tower→nest), `node` (tower→node), `nucleus` (tower→nest→node).
+
+### Primal Names Evolution
+
+| File | Change |
+|------|--------|
+| `crates/biomeos-types/src/primal_names.rs` | Added `CELLMEMBRANE` and `LITHOSPORE` constants + display names + `is_known_primal()` coverage |
+
+Fixed test `capabilities_match_registry_toml` that validated all providers in `capability_registry.toml` are known primals.
+
+### Test Fixes
+
+| Test | Issue | Fix |
+|------|-------|-----|
+| `capabilities_match_registry_toml` | `cellmembrane` not in `is_known_primal()` | Added CELLMEMBRANE + LITHOSPORE to primal_names |
+| `test_health_check_includes_family_socket_and_capability_count` | Asserted `j["registered_capabilities"]` but field moved to `j["routing"]["registered_capabilities"]` | Updated assertion path |
+| `serve_tcp_only_initializes_and_responds_to_health_check` | Same nested field issue | Updated assertion path |
+| Unfulfilled `#[expect(dead_code)]` warnings | `discovery_gossip.rs` + `protocol_negotiation.rs` fields used in tests triggering "unfulfilled" | Evolved to `#[cfg_attr(not(test), allow(dead_code))]` |
+
+### Verification
+
+- `cargo check`: 0 errors, 0 warnings
+- `cargo clippy --all-targets`: clean
+- `cargo test --lib -p biomeos-atomic-deploy`: **1600 pass, 0 fail** (was 1597 pass, 3 fail before fixes)
+- `cargo test --lib -p biomeos-types -- primal_names`: 19 pass, 0 fail

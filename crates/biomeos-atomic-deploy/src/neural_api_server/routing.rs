@@ -433,6 +433,13 @@ impl NeuralApiServer {
                     dispatch(result, id)
                 }
             }
+            // Composition orchestrate — sequence prerequisite compositions then execute target
+            Route::CompositionOrchestrate => {
+                dispatch(
+                    self.orchestrate_composition(params).await,
+                    id,
+                )
+            }
             // Composition boot_order — cellMembrane-authoritative startup ordering
             Route::CompositionBootOrder => dispatch(
                 self.lifecycle_handler.composition_boot_order(params).await,
@@ -654,6 +661,116 @@ impl NeuralApiServer {
     /// Backward-compatible wrapper that converts `DispatchOutcome` to `Value`.
     pub async fn handle_request_json(&self, request_line: &str) -> Value {
         self.handle_request(request_line).await.into_response()
+    }
+
+    /// Orchestrate a full composition — sequences prerequisites then executes the target.
+    ///
+    /// For `nucleus`, this means: tower → nest + node (parallel) → nucleus_complete.
+    /// Each prerequisite is started via `composition.start { execute: true }` only if
+    /// its health gate is not already satisfied. Returns results for each step.
+    async fn orchestrate_composition(
+        &self,
+        params: &Option<Value>,
+    ) -> anyhow::Result<Value> {
+        use anyhow::Context;
+
+        let params = params.as_ref().context("Missing parameters")?;
+        let target = params["composition"]
+            .as_str()
+            .or_else(|| params["name"].as_str())
+            .context("Missing 'composition' parameter")?;
+
+        let sequence = match target {
+            "tower" => vec!["tower"],
+            "nest" => vec!["tower", "nest"],
+            "node" => vec!["tower", "node"],
+            "nucleus" => vec!["tower", "nest", "node"],
+            other => {
+                return Ok(json!({
+                    "error": format!("Unknown composition: {other}"),
+                    "available": ["tower", "nest", "node", "nucleus"],
+                }));
+            }
+        };
+
+        let user_params = params.get("params").cloned().unwrap_or(json!({}));
+        let mut steps = Vec::new();
+
+        for composition in &sequence {
+            let step_params = Some(json!({
+                "composition": composition,
+                "execute": true,
+                "params": user_params,
+            }));
+
+            let health = self.lifecycle_handler.composition_health(&None).await?;
+            let already_healthy = health
+                .get("subsystems")
+                .and_then(|s| s.get(*composition))
+                .and_then(|v| v.as_str())
+                == Some("ok");
+
+            if already_healthy {
+                steps.push(json!({
+                    "composition": composition,
+                    "action": "skipped",
+                    "reason": "already healthy",
+                }));
+                continue;
+            }
+
+            let result = self.lifecycle_handler.composition_start(&step_params).await?;
+            let ready = result.get("ready").and_then(|r| r.as_bool()) == Some(true);
+
+            if ready {
+                let graph_id = result["graph"].as_str().unwrap_or_default();
+                let graph_params = Some(json!({
+                    "graph_id": graph_id,
+                    "params": user_params,
+                }));
+                let exec_result = self.graph_handler.execute(&graph_params).await;
+                match exec_result {
+                    Ok(v) => steps.push(json!({
+                        "composition": composition,
+                        "action": "executed",
+                        "graph": graph_id,
+                        "result": v,
+                    })),
+                    Err(e) => {
+                        steps.push(json!({
+                            "composition": composition,
+                            "action": "failed",
+                            "graph": graph_id,
+                            "error": e.to_string(),
+                        }));
+                        return Ok(json!({
+                            "target": target,
+                            "completed": false,
+                            "steps": steps,
+                            "error": format!("Composition '{composition}' failed: {e}"),
+                        }));
+                    }
+                }
+            } else {
+                steps.push(json!({
+                    "composition": composition,
+                    "action": "blocked",
+                    "blocked_by": result.get("blocked_by"),
+                }));
+                return Ok(json!({
+                    "target": target,
+                    "completed": false,
+                    "steps": steps,
+                    "error": format!("Composition '{composition}' blocked by prerequisites"),
+                }));
+            }
+        }
+
+        Ok(json!({
+            "target": target,
+            "completed": true,
+            "steps": steps,
+        }))
     }
 }
 
