@@ -21,8 +21,8 @@ pub struct GossipCapabilityHint {
     pub gate: String,
     /// The primal on that gate that provides it.
     pub primal: String,
-    /// The original capability name that was queried.
-    #[allow(dead_code)]
+    /// The original capability name that was queried (used in trace logging and assertions).
+    #[expect(dead_code, reason = "semantic context for trace logging; used in test assertions")]
     pub capability: String,
 }
 

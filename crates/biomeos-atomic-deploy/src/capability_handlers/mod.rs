@@ -29,4 +29,5 @@ mod discovery;
 mod health;
 mod primal_start;
 
+pub(crate) use health::health_check_capability;
 pub(crate) use primal_start::primal_start_capability;

@@ -10,6 +10,13 @@ use biomeos_types::primal_names;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap};
 
+/// Deployment binary identifiers (process/service modes) for NUCLEUS launch graphs.
+/// Distinct from `primal_names` which are capability routing identifiers.
+mod deploy_ids {
+    pub const BEARDOG_SERVER: &str = "beardog-server";
+    pub const SONGBIRD_ORCHESTRATOR: &str = "songbird-orchestrator";
+}
+
 pub use crate::orchestrator::DeploymentResult;
 
 /// Neural API deployment graph node
@@ -70,7 +77,7 @@ impl AtomicDeploymentGraph {
             node_type: "primal.launch".to_string(),
             dependencies: vec!["derive_tower_seed".to_string()],
             config: serde_json::json!({
-                "primal": "beardog-server",
+                "primal": deploy_ids::BEARDOG_SERVER,
                 "atomic": "tower",
                 "env": {
                     "FAMILY_ID": family_id,
@@ -85,7 +92,7 @@ impl AtomicDeploymentGraph {
             node_type: "primal.launch".to_string(),
             dependencies: vec!["deploy_tower_beardog".to_string()],
             config: serde_json::json!({
-                "primal": "songbird-orchestrator",
+                "primal": deploy_ids::SONGBIRD_ORCHESTRATOR,
                 "atomic": "tower",
                 "env": {
                     "SONGBIRD_FAMILY_ID": family_id

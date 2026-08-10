@@ -88,6 +88,9 @@ impl GraphExecutor {
                 node_handlers::health_check(node, context).await
             }
             "health.check_all" => Self::node_health_check_all(node, context).await,
+            "health.check_capability" => {
+                crate::capability_handlers::health_check_capability(node, context).await
+            }
             "verification" => Self::node_verification(node, context).await,
             "lineage.verify_siblings" => node_handlers::lineage_verify(node, context).await,
             "report.deployment_success" => node_handlers::deployment_report(node, context).await,

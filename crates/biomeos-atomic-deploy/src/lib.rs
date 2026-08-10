@@ -127,7 +127,7 @@ pub(crate) mod primal_communication;
 pub mod primal_coordinator; // NEW: Discovery-based coordination (TRUE PRIMAL)
 pub mod primal_discovery; // NEW: Socket scanning discovery
 pub mod primal_launcher;
-pub(crate) mod security_jwt_client;
+pub mod security_jwt_client;
 
 // Neural API graph execution (TOML-based deterministic deployment)
 pub(crate) mod capability_domains; // Capability domain mappings for fallback resolution
@@ -140,7 +140,7 @@ mod capability_translation_integration_tests; // Sovereign Onion translation tes
 #[cfg(test)]
 mod capability_translation_tests;
 pub mod handlers; // NEW: Smart decomposition of neural_api_server
-pub(crate) mod http_client;
+pub mod http_client;
 pub mod lifecycle_manager; // NEW: Primal lifecycle management (resurrection, apoptosis)
 pub mod living_graph; // NEW: Runtime protocol state tracking
 pub(crate) mod mode;

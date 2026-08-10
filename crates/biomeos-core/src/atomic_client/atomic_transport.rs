@@ -6,7 +6,6 @@
 use anyhow::{Context, Result};
 use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use std::path::Path;
-use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
@@ -64,17 +63,6 @@ pub(crate) fn connect_abstract(name: &str) -> Result<UnixStream> {
     Ok(UnixStream::from_std(std_stream)?)
 }
 
-/// Legacy per-path entry point; prefer [`jsonrpc_via_transport`].
-#[expect(dead_code, reason = "retained for callers that pass a path directly")]
-pub(crate) async fn jsonrpc_unix(path: &Path, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
-    jsonrpc_via_transport(
-        &TransportEndpoint::UnixSocket {
-            path: path.to_path_buf(),
-        },
-        request,
-    )
-    .await
-}
 
 /// Connect to a Unix socket, perform a BTSP client handshake + Phase 3 negotiate,
 /// then send a JSON-RPC request over the encrypted (or plaintext fallback) channel.
@@ -181,25 +169,6 @@ async fn send_encrypted_jsonrpc(
     Ok(response)
 }
 
-/// Legacy per-host entry point; prefer [`jsonrpc_via_transport`].
-#[expect(
-    dead_code,
-    reason = "retained for callers that pass host/port directly"
-)]
-pub(crate) async fn jsonrpc_tcp(
-    host: &str,
-    port: u16,
-    request: JsonRpcRequest,
-) -> Result<JsonRpcResponse> {
-    jsonrpc_via_transport(
-        &TransportEndpoint::TcpSocket {
-            host: Arc::from(host),
-            port,
-        },
-        request,
-    )
-    .await
-}
 
 /// Minimal HTTP/1.1 POST to `POST /jsonrpc` over a raw `TcpStream`.
 pub(crate) async fn jsonrpc_http(
@@ -273,25 +242,6 @@ pub(crate) async fn jsonrpc_http(
     Ok(response)
 }
 
-/// Send JSON-RPC over an abstract socket (Linux/Android).
-///
-/// Legacy entry point; prefer [`jsonrpc_via_transport`].
-#[expect(
-    dead_code,
-    reason = "retained for callers that pass an abstract name directly"
-)]
-pub(crate) async fn jsonrpc_abstract(
-    name: &str,
-    request: JsonRpcRequest,
-) -> Result<JsonRpcResponse> {
-    jsonrpc_via_transport(
-        &TransportEndpoint::AbstractSocket {
-            name: Arc::from(name),
-        },
-        request,
-    )
-    .await
-}
 
 #[cfg(unix)]
 pub(crate) async fn connect_unix_timed(path: &Path, timeout_dur: Duration) -> Result<UnixStream> {

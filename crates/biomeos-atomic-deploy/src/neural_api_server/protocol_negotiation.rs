@@ -160,9 +160,9 @@ fn select_protocol(client_supported: &[NegotiatedProtocol]) -> NegotiatedProtoco
 ///
 /// Sends `PROTOCOLS: tarpc,jsonrpc\n` and reads back the server's selection.
 /// Used by Neural API when connecting to other primals that support G65.
-#[allow(
+#[expect(
     dead_code,
-    reason = "client-side helper for future outbound G65 connections"
+    reason = "client-side G65 outbound negotiation; wired when primals advertise protocol support"
 )]
 pub async fn negotiate_client<S>(
     stream: &mut S,

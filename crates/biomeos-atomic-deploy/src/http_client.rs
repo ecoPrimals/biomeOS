@@ -6,10 +6,6 @@
 //! Provides HTTP/HTTPS via the discovery provider (network delegate): fetching binaries, update checks,
 //! niche deployment (git clone), and remote health checks.
 
-#![cfg_attr(
-    not(test),
-    expect(dead_code, reason = "wired when Songbird network delegate is live")
-)]
 
 use anyhow::{Context, Result, bail};
 use base64::Engine;

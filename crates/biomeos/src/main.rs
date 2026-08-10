@@ -345,6 +345,61 @@ pub(crate) enum NucleusCommand {
         #[arg(short = 'n', long)]
         dry_run: bool,
     },
+
+    /// Stop a running NUCLEUS via remote lifecycle RPC
+    #[command(name = "stop")]
+    Stop {
+        /// Neural API Unix socket path (auto-discovered if not specified)
+        #[arg(long)]
+        socket: Option<PathBuf>,
+
+        /// Family ID (auto-derived from .family.seed if not specified)
+        #[arg(long)]
+        family_id: Option<String>,
+    },
+
+    /// Query NUCLEUS status via remote lifecycle RPC
+    #[command(name = "status")]
+    Status {
+        /// Neural API Unix socket path (auto-discovered if not specified)
+        #[arg(long)]
+        socket: Option<PathBuf>,
+
+        /// Family ID (auto-derived from .family.seed if not specified)
+        #[arg(long)]
+        family_id: Option<String>,
+    },
+
+    /// Deploy a spore manifest to a running NUCLEUS
+    #[command(name = "deploy")]
+    Deploy {
+        /// Path to the spore manifest file
+        spore_file: PathBuf,
+
+        /// Neural API Unix socket path (auto-discovered if not specified)
+        #[arg(long)]
+        socket: Option<PathBuf>,
+
+        /// Family ID (auto-derived from .family.seed if not specified)
+        #[arg(long)]
+        family_id: Option<String>,
+    },
+
+    /// Undeploy a primal from a running NUCLEUS (apoptosis)
+    #[command(name = "undeploy")]
+    Undeploy {
+        /// Primal name to undeploy
+        #[arg(long)]
+        primal: Option<String>,
+
+        /// Neural API Unix socket path (auto-discovered if not specified)
+        #[arg(long)]
+        socket: Option<PathBuf>,
+
+        /// Family ID (auto-derived from .family.seed if not specified)
+        #[arg(long)]
+        family_id: Option<String>,
+    },
 }
 
 /// Graph subcommands — sign, verify, and execute deployment graphs
@@ -689,6 +744,24 @@ pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
                 family_id,
                 dry_run,
             } => modes::nucleus_attach::run(cell_graph, socket, family_id, dry_run).await,
+            NucleusCommand::Stop { socket, family_id } => {
+                modes::nucleus::run_stop(socket, family_id).await
+            }
+            NucleusCommand::Status { socket, family_id } => {
+                let summary = modes::nucleus::run_status(socket, family_id).await?;
+                println!("{summary:?}");
+                Ok(())
+            }
+            NucleusCommand::Deploy {
+                spore_file,
+                socket,
+                family_id,
+            } => modes::nucleus::run_deploy(spore_file, socket, family_id).await,
+            NucleusCommand::Undeploy {
+                primal,
+                socket,
+                family_id,
+            } => modes::nucleus::run_undeploy(primal, socket, family_id).await,
         },
     }
 }

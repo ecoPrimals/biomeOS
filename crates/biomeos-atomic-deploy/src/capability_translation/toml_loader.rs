@@ -29,12 +29,10 @@ struct RegistryToml {
 
 #[derive(Debug, Deserialize)]
 struct DomainEntry {
-    #[allow(dead_code)]
     #[serde(default)]
     provider: String,
     #[serde(default)]
     ribocipher: bool,
-    #[allow(dead_code)]
     #[serde(default)]
     capabilities: Vec<String>,
 }
@@ -107,13 +105,21 @@ pub fn load_from_registry_toml(
         }
     }
     // Also register capabilities listed under ribocipher-requiring domains
-    for (_domain_name, domain_entry) in &parsed.domains {
+    for domain_entry in parsed.domains.values() {
         if domain_entry.ribocipher {
             for cap in &domain_entry.capabilities {
                 registry.set_domain_ribocipher(cap, true);
             }
         }
     }
+
+    // Build domain→provider lookup from [domains] section for fallback resolution
+    let domain_providers: HashMap<&str, &str> = parsed
+        .domains
+        .iter()
+        .filter(|(_, entry)| !entry.provider.is_empty())
+        .map(|(name, entry)| (name.as_str(), entry.provider.as_str()))
+        .collect();
 
     for (domain, entries) in &parsed.translations {
         let domain_requires_ribocipher = domain_ribocipher
@@ -122,10 +128,23 @@ pub fn load_from_registry_toml(
             .unwrap_or(false);
 
         for (semantic_key, entry) in entries {
+            // Resolution order: env override → per-entry provider → domain-level provider
             let actual_provider = provider_overrides
                 .get(domain.as_str())
                 .filter(|s| !s.is_empty())
-                .map_or(entry.provider.as_str(), |s| s.as_str());
+                .map_or_else(
+                    || {
+                        if entry.provider.is_empty() {
+                            domain_providers
+                                .get(domain.as_str())
+                                .copied()
+                                .unwrap_or("")
+                        } else {
+                            entry.provider.as_str()
+                        }
+                    },
+                    |s| s.as_str(),
+                );
 
             let socket_path = socket::resolve_primal_socket(actual_provider, family_id);
 

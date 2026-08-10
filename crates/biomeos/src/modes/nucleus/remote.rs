@@ -58,11 +58,11 @@ pub(crate) async fn send_lifecycle_rpc(
     )
 }
 
-/// Start NUCLEUS via `lifecycle.start` on the Neural API.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "staged for dispatch wiring in next sprint")
-)]
+/// Start NUCLEUS via `lifecycle.start` on a remote Neural API.
+///
+/// Distinct from the local `NucleusCommand::Start` which bootstraps NUCLEUS in-process.
+/// This sends an RPC to an already-running Neural API to trigger a remote start.
+#[cfg_attr(not(test), allow(dead_code))]
 pub async fn run_start(
     socket: Option<PathBuf>,
     family_id: Option<String>,
@@ -97,10 +97,6 @@ pub async fn run_start(
 }
 
 /// Stop NUCLEUS via `lifecycle.shutdown_all` on the Neural API.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "staged for dispatch wiring in next sprint")
-)]
 pub async fn run_stop(socket: Option<PathBuf>, family_id: Option<String>) -> Result<()> {
     let (socket_path, family) = resolve_lifecycle_socket(socket, family_id);
 
@@ -124,10 +120,6 @@ pub async fn run_stop(socket: Option<PathBuf>, family_id: Option<String>) -> Res
 }
 
 /// Query NUCLEUS status via `lifecycle.status` on the Neural API.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "staged for dispatch wiring in next sprint")
-)]
 pub async fn run_status(
     socket: Option<PathBuf>,
     family_id: Option<String>,
@@ -149,10 +141,6 @@ pub async fn run_status(
 }
 
 /// Deploy a spore manifest via `graph.execute` on the Neural API.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "staged for dispatch wiring in next sprint")
-)]
 pub async fn run_deploy(
     spore_file: PathBuf,
     socket: Option<PathBuf>,
@@ -198,10 +186,6 @@ pub async fn run_deploy(
 }
 
 /// Undeploy a single primal via `lifecycle.apoptosis` on the Neural API.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "staged for dispatch wiring in next sprint")
-)]
 pub async fn run_undeploy(
     primal_name: Option<String>,
     socket: Option<PathBuf>,
