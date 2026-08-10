@@ -406,9 +406,32 @@ impl NeuralApiServer {
             Route::CompositionStatus => {
                 dispatch(self.lifecycle_handler.composition_status().await, id)
             }
-            // Composition start — health-gated transition check + graph resolution
+            // Composition start — health-gated transition check + optional graph execution
             Route::CompositionStart => {
-                dispatch(self.lifecycle_handler.composition_start(params).await, id)
+                let should_execute = params
+                    .as_ref()
+                    .and_then(|p| p.get("execute"))
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+
+                let result = self.lifecycle_handler.composition_start(params).await;
+
+                if should_execute {
+                    match &result {
+                        Ok(v) if v.get("ready").and_then(|r| r.as_bool()) == Some(true) => {
+                            let graph_id = v["graph"].as_str().unwrap_or_default();
+                            let graph_params = Some(serde_json::json!({
+                                "graph_id": graph_id,
+                                "params": params.as_ref().and_then(|p| p.get("params")).cloned()
+                                    .unwrap_or(serde_json::json!({})),
+                            }));
+                            dispatch(self.graph_handler.execute(&graph_params).await, id)
+                        }
+                        _ => dispatch(result, id),
+                    }
+                } else {
+                    dispatch(result, id)
+                }
             }
             // Composition boot_order — cellMembrane-authoritative startup ordering
             Route::CompositionBootOrder => dispatch(
