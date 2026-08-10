@@ -28,14 +28,12 @@ pub(crate) const EXPLORATION_BONUS: f64 = 0.1;
 
 /// Topology affinity multipliers — prefer same-gate IPC over cross-gate or WAN.
 /// Source: TOPOLOGY_MAP.toml in wateringHole.
-#[expect(
-    dead_code,
-    reason = "VPS and CROSS_SEGMENT used by future gate_id comparison"
-)]
 pub mod topology {
     pub const SAME_GATE: f64 = 1.0;
     pub const SAME_SEGMENT: f64 = 0.9;
+    #[expect(dead_code, reason = "wired when gate_id topology map is available")]
     pub const CROSS_SEGMENT: f64 = 0.7;
+    #[expect(dead_code, reason = "wired when gate_id topology map is available")]
     pub const VPS: f64 = 0.4;
     pub const WAN: f64 = 0.3;
 }
