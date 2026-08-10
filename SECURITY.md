@@ -7,7 +7,7 @@
 
 | Version | Supported |
 |---------|-----------|
-| v4.x (current: v4.47) | Yes |
+| v4.x (current: v4.57) | Yes |
 | v3.x    | Security fixes only |
 | < v3.0  | No        |
 
@@ -36,7 +36,7 @@ biomeOS follows the ecoPrimals security model:
 
 - **Zero unsafe code** in production (`#![forbid(unsafe_code)]` workspace-wide on all 26 crates)
 - **Zero C dependencies** at the application level (ecoBin v3.0 compliant)
-- **Platform-agnostic IPC** via `biomeos-core::ipc` (`TransportStream`, `TransportListener`) — Unix primary, TCP fallback on Windows; Phase 2 transport complete (12/14 primals)
+- **Platform-agnostic IPC** via `biomeos-core::ipc` (`TransportStream`, `TransportListener`) — Unix primary, TCP fallback on Windows; Neural API routing (Phase 3 / Wave 157a)
 - **No telemetry or phone-home** — sovereignty by design
 - **Dark Forest beacon genetics** for privacy-preserving discovery
 - **BearDog delegation** for all cryptographic operations (biomeOS never handles keys)

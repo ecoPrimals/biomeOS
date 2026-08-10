@@ -295,3 +295,60 @@ Combined with the server-side Tier 2 from `6917eff2`, the full mito-tag round-tr
 - **bearDog team**: Ship `decode_mito_tag` + `encode_mito_tag` to activate Tier 2 fleet-wide
 - **cellMembrane team**: Implement `depot.*` methods — graph executor now dispatches them
 - **blueGate builder**: Rebuild biomeOS with `3dfb721b`, run `depot_lineage_batch` after next vertebrate build
+
+---
+
+## Addendum 10: Deep Debt Pass + Overstep Cleanup (27ecd243)
+
+**Date**: August 10, 2026
+**Commit**: `27ecd243`
+
+### Assessment
+
+Full codebase audit against deep-debt principles:
+- **Zero unsafe code** — enforced via `#![forbid(unsafe_code)]` on all 26 member crates
+- **Zero files over 800 lines** — largest is 798L (`node_handlers.rs`)
+- **Zero production mocks** — only legitimate `#[cfg(windows)]` platform stubs
+- **Zero TODO/FIXME/HACK in production** — confirmed via recursive search
+- **Zero unused workspace dependencies** — `indexmap` removed
+
+### Changes
+
+| File | Change |
+|------|--------|
+| `Cargo.toml` | Removed unused `indexmap` workspace dependency |
+| `crates/biomeos-atomic-deploy/src/capability_handlers/mod.rs` | Exported `health_check_capability` |
+| `crates/biomeos-atomic-deploy/src/capability_handlers/health.rs` | Removed dead_code suppression — now live |
+| `crates/biomeos-atomic-deploy/src/neural_executor/dispatch.rs` | Wired `health.check_capability` dispatch arm |
+| `crates/biomeos-atomic-deploy/src/http_client.rs` | Promoted to `pub` module (complete HTTP delegate implementation) |
+| `crates/biomeos-atomic-deploy/src/security_jwt_client.rs` | Promoted to `pub` module (complete JWT provisioning) |
+| `crates/biomeos-atomic-deploy/src/lib.rs` | Updated module visibility |
+| `crates/biomeos-atomic-deploy/src/deployment_graph.rs` | Evolved hardcoded `"beardog-server"` / `"songbird-orchestrator"` → `deploy_ids` constants |
+| `crates/biomeos-atomic-deploy/src/capability_translation/defaults.rs` | Evolved `"songbird.federation.peers"` → agnostic `"federation.peers"` (no primal prefix) |
+| `crates/biomeos-atomic-deploy/src/capability_translation/toml_loader.rs` | Wired `DomainEntry.provider` as fallback; fixed clippy `for_kv_map` |
+| `crates/biomeos-atomic-deploy/src/neural_router/discovery_gossip.rs` | Evolved annotation to `#[expect(dead_code, reason)]` |
+| `crates/biomeos-atomic-deploy/src/neural_api_server/protocol_negotiation.rs` | Evolved annotation to `#[expect(dead_code, reason)]` |
+| `crates/biomeos-core/src/atomic_client/atomic_transport.rs` | Removed 3 obsolete delegating wrappers (`jsonrpc_unix/tcp/abstract`) |
+| `crates/biomeos/src/main.rs` | Added CLI subcommands: `nucleus stop`, `nucleus status`, `nucleus deploy`, `nucleus undeploy` |
+| `crates/biomeos/src/modes/nucleus/remote.rs` | Removed dead_code annotations — lifecycle functions now wired |
+
+### Overstep Cleanup
+
+| Item | Action |
+|------|--------|
+| `visualizations/*.png` (1x1 pixel placeholders) | Removed — SVG/DOT sources are canonical |
+| `SECURITY.md` version table (v4.47) | Updated → v4.57 |
+| `tmp-cloud-init/` (root-owned Dec 2025 artifact) | Flagged for manual `sudo rm` — not git-tracked |
+
+### Verification
+
+- `cargo check`: 0 warnings
+- `cargo clippy --all-targets`: 0 warnings
+- `cargo test`: 578 pass, 0 fail
+
+### Upstream Action
+
+- **All primal teams**: `federation.peers` wire method is now agnostic — ensure primals accept bare method name (no `songbird.` prefix required)
+- **Songbird team**: Verify `federation.peers` / `federation.status` dispatch without self-prefix
+- **All gates**: Deploy new binary for CLI `nucleus stop/status/deploy/undeploy` support
+- **eastGate operator**: `sudo rm -rf tmp-cloud-init/` (stale local artifact, not git-tracked)

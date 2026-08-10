@@ -2,6 +2,59 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## v4.57 (2026-08-10) — Wave 157a: Neural API Stage 2 + Deep Debt Evolution
+
+### Neural API Stage 2 Routing Infrastructure
+- riboCipher-aware connection pooling (`[0xEC, 0x01]` prefix on hot path)
+- Bootstrap→Coordinated auto-transition (background watcher, 15s probe interval)
+- TOML-driven capability translations (`config/capability_registry.toml`)
+- Perceptron L5 shadow routing with re-entrancy guard
+
+### P0-C FD Leak Resolution
+- Fixed recursive PerceptronDispatcher calls (infinite shadow inference loop)
+- Removed hot-path health checks from discovery functions
+- FD accumulation eliminated: stable 14 FDs vs prior 58K blowout
+
+### G69 Depot Lineage + riboCipher Tier 2
+- `RiboCipherTier` enum (Clear/Mito/Nuclear) with signal byte dispatch
+- Server-side mito-tag validation via `crypto.decode_mito_tag` capability
+- Client-side `send_mito_jsonrpc()` in connection pool
+- `graphs/depot_lineage.toml` + `depot_lineage_batch.toml` provenance templates
+
+### Graph Executor Evolution
+- Generic `node_capability_call` handler (any dotted capability auto-routes)
+- `node_graph_foreach` for batch iteration with bounded concurrency
+- Wildcard dispatch: unrecognized dotted operations route to `capability.call`
+
+### P1 FD Exhaustion Self-Heal
+- `raise_fd_limit()` at startup: raises soft NOFILE to 65536 via `rustix::process::setrlimit`
+- Eliminates dependency on systemd `LimitNOFILE` configuration
+
+### Wave 157e Routing Fixes
+- swarmVine socket discovery: prefer `.jsonrpc.sock` over `.tarpc.sock`
+- Capability routing gaps: added `content.stat`, `spine.list`, and 10+ others to compiled defaults
+- Structured `/health` endpoint with routing, security, and composition metrics
+
+### Deep Debt Pass
+- Removed unused `indexmap` dependency
+- Wired `health.check_capability` executor dispatch
+- CLI subcommands: `nucleus stop`, `nucleus status`, `nucleus deploy`, `nucleus undeploy`
+- Promoted `http_client` and `security_jwt_client` to public modules
+- Removed 3 obsolete transport wrappers (`jsonrpc_unix/tcp/abstract`)
+- Evolved deployment graph strings to constants (`deploy_ids`)
+- Agnostic federation methods (removed `songbird.` prefix from wire names)
+- Wired `DomainEntry.provider` as fallback in TOML capability resolution
+- Removed stale placeholder PNGs from `visualizations/`
+- Updated SECURITY.md version table (v4.47 → v4.57)
+
+### Metrics
+- 578 tests, 0 failures
+- 0 clippy warnings
+- 0 unsafe code blocks (26 crates, `#![forbid(unsafe_code)]`)
+- 0 TODO/FIXME in production code
+
+---
+
 ## v4.56 (2026-08-03) — Wave 155n: G22 COMPLETE + Spring Dispatch Infrastructure
 
 ### Spring Deploy Graph Executor (`77866b4c`)
