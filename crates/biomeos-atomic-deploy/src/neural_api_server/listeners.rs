@@ -11,15 +11,25 @@ use super::NeuralApiServer;
 use crate::mode::BiomeOsMode;
 
 impl NeuralApiServer {
-    /// Full health status (HEALTH-01 compliant).
+    /// Full health status (HEALTH-01 compliant + G70 composition awareness).
     ///
     /// Responds to both `health` and `health.check` JSON-RPC methods.
-    /// Returns the guideStone standard `{status, primal, version, uptime_s}`
-    /// plus biomeOS-specific fields for backward compatibility.
+    /// Returns structured health with composition state, routing metrics,
+    /// and security posture for observability and composition graph decisions.
     pub(crate) async fn health_check(&self) -> Result<serde_json::Value> {
         let mode = self.mode.read().await;
-        let cap_count = self.router.list_capabilities().await.len();
         let uptime_s = self.started_at.elapsed().as_secs();
+        let pool_idle = self.router.connection_pool.idle_count();
+
+        let registry = self.translation_registry.read().await;
+        let stats = registry.stats();
+        drop(registry);
+
+        let btsp_enforced = !self.btsp_optional
+            && self
+                .btsp_escalated
+                .load(std::sync::atomic::Ordering::Relaxed);
+
         Ok(serde_json::json!({
             "status": "alive",
             "primal": "biomeOS",
@@ -27,7 +37,19 @@ impl NeuralApiServer {
             "uptime_s": uptime_s,
             "mode": format!("{mode:?}"),
             "family_id": self.family_id,
-            "registered_capabilities": cap_count,
+            "routing": {
+                "registered_capabilities": stats.total_translations,
+                "providers": stats.total_providers,
+                "pool_idle_connections": pool_idle,
+            },
+            "security": {
+                "btsp_enforced": btsp_enforced,
+                "btsp_optional": self.btsp_optional,
+                "ribocipher_tier": if btsp_enforced { "tier1_clear" } else { "tier0_plain" },
+            },
+            "composition": {
+                "socket": self.socket_path.display().to_string(),
+            },
         }))
     }
 

@@ -98,7 +98,7 @@ pub fn resolve_primal_socket_with(
 /// Used only during discovery bootstrap when the capability registry isn't
 /// yet populated. In production, `primal.announce` provides the authoritative
 /// mapping and this table is never consulted.
-use biomeos_types::primal_names::{BEARDOG, NESTGATE, SKUNKBAT, SONGBIRD, TOADSTOOL};
+use biomeos_types::primal_names::{BEARDOG, NESTGATE, SKUNKBAT, SONGBIRD, SWARMVINE, TOADSTOOL};
 
 const DOMAIN_PRIMAL_BOOTSTRAP: &[(&str, &str)] = &[
     ("compute", TOADSTOOL),
@@ -106,6 +106,7 @@ const DOMAIN_PRIMAL_BOOTSTRAP: &[(&str, &str)] = &[
     ("crypto", BEARDOG),
     ("relay", SONGBIRD),
     ("defense", SKUNKBAT),
+    ("gossip", SWARMVINE),
 ];
 
 fn domain_socket_alias(primal: &str) -> Option<&'static str> {
@@ -117,7 +118,8 @@ fn domain_socket_alias(primal: &str) -> Option<&'static str> {
 
 /// Primals that use dual-socket mode (tarpc + JSON-RPC).
 /// biomeOS forwards via JSON-RPC, so prefer `.jsonrpc.sock` paths.
-/// Derived from capability domains: currently only `compute` primals bind dual.
+/// swarmVine binds both tarpc (primary gossip protocol) and JSON-RPC (G65 negotiate,
+/// used by Neural API for gossip.query/gossip.inject capability routing).
 fn dual_socket_primals() -> &'static [&'static str] {
-    &[TOADSTOOL]
+    &[TOADSTOOL, SWARMVINE]
 }
