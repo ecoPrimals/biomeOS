@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
-**Updated**: August 7, 2026
-**Version**: v4.57+ (Wave 157a — G67 Neural API Activation, Stage 2)
-**Posture**: STAGE 2 CODE TEAM HANDOFF — G64+G65+G66 COMPLETE (cephalization trilogy). G67 N1 forwarding fix SHIPPED. Neural API is the routing substrate. ZERO P0/P1/P2. Deep debt CLEAN.
+**Updated**: August 10, 2026
+**Version**: v4.57 (Wave 157g — STADIAL SHIFT, G72 Dependency Pandemic)
+**Posture**: EXEMPLAR. 4-gate gossip mesh LIVE. Multi-composition orchestration SHIPPED. G72 audit CLEAN. biomeOS is the lean reference pattern — 0 P0, 0 P1, 0 P2.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -11,27 +11,26 @@
 
 | Metric | Value |
 |--------|-------|
-| Tests | 8,570+ (578 unit, 456 neural API) pass, 0 failures |
-| Line Coverage | 88.37% (llvm-cov) |
-| Clippy | 0 warnings (pedantic+nursery, --tests, -D warnings) |
-| Unsafe blocks | 0 (`#![forbid(unsafe_code)]` on all 26 crates) |
-| C dependencies | 0 (pure Rust stack, deny.toml enforced) |
-| Largest prod file | 731 LOC |
+| Tests | 2,691+ (biomeos-atomic-deploy: 1600, biomeos-types: 1091) pass, 0 failures |
+| Clippy | 0 warnings (pedantic+nursery, --all-targets) |
+| Unsafe blocks | 0 (`#![forbid(unsafe_code)]` on all crates) |
+| C dependencies | 0 (pure Rust stack: blake3 pure, flate2 rust_backend, rustix zero-libc) |
+| Largest prod file | 844 LOC (main.rs — declarative CLI structs) |
 | TODOs in prod | 0 |
 | Production unwraps | 0 (workspace lint enforced) |
-| Dead code | 0 |
-| Dead dependencies | 0 (47 removed across sessions, cargo-machete verified) |
-| cargo deny | clean (advisories, bans, licenses, sources) |
+| Dead code | 0 (all staged code has `#[expect(dead_code, reason)]`) |
+| Dead dependencies | 0 |
 | Formatting | PASS (rustfmt clean) |
-| Cross-arch | x86_64 + aarch64 + armv7 + x86_64-pc-windows-gnu |
+| Cross-arch | x86_64-unknown-linux-musl + x86_64-pc-windows-gnu + aarch64 (partial) |
 | Workspace crates | 26 |
-| Signal graphs | 30 |
+| Signal graphs | 64 |
 | Capability domains | 27 (320+ translations) |
-| Mocks in prod | 0 |
-| panic! in prod | 0 (all in test modules) |
-| Hardcoded primal names in prod | 0 (all capability-based) |
-| Hardcoded primal names | 0 |
-| Socket namespace refs (stale) | 0 (unified to membrane/) |
+| Mocks in prod | 0 (all test-only) |
+| panic! in prod | 0 |
+| Hardcoded primal names in prod | 0 (all use primal_names constants) |
+| Tokio "full" in prod | 0 (minimal features: rt-multi-thread, macros, sync, time) |
+| Edition | 2024 |
+| Rust version | 1.87 |
 
 ---
 

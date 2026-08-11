@@ -1,7 +1,7 @@
 # biomeOS Scripts
 
 **Status**: Most scripts are deprecated — deployment is via `biomeos nucleus start` (Pure Rust)  
-**Updated**: August 4, 2026
+**Updated**: August 10, 2026
 
 ---
 
@@ -9,10 +9,16 @@
 
 | Script | Purpose | Status |
 |--------|---------|--------|
-| `build_primals_for_testing.sh` | Build primal binaries from source repos → `plasmidBin/primals/` | **Dev-only** |
 | `create_livespore.sh` | Create bootable LiveSpore USB (Alpine Linux) | Active |
 | `create_sibling_spore.sh` | Create sibling spore with genetic lineage | Active |
 | `test_provenance_trio_e2e.sh` | E2E test for provenance trio (rhizoCrypt, LoamSpine, sweetGrass) | Active |
+
+## Development-Only Scripts
+
+| Script | Purpose | Status |
+|--------|---------|--------|
+| `build_primals_for_testing.sh` | Build primal binaries from source repos → `plasmidBin/primals/` | **Dev-only** |
+| `neural-api-test.sh` | Manual Neural API activation test (Wave 157a Stage 2) | **Dev-only** — superseded by `cargo test --workspace` (2691+ tests) |
 
 > **Note**: `build_primals_for_testing.sh` is for local development only. For production,
 > use `tools/harvest` (canonical) or LiveSpore USB. See `plasmidBin/MANIFEST.md`.

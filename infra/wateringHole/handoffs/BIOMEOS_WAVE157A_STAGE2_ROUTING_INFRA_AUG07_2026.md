@@ -408,3 +408,53 @@ Fixed test `capabilities_match_registry_toml` that validated all providers in `c
 - `cargo clippy --all-targets`: clean
 - `cargo test --lib -p biomeos-atomic-deploy`: **1600 pass, 0 fail** (was 1597 pass, 3 fail before fixes)
 - `cargo test --lib -p biomeos-types -- primal_names`: 19 pass, 0 fail
+
+---
+
+## Addendum 12: Deep Debt Audit Final + Documentation Update
+
+**Date**: 2026-08-10 20:15 EDT
+**Context**: Wave 157g STADIAL SHIFT — comprehensive deep-debt audit + root doc cleanup.
+
+### Deep Debt Audit Results — biomeOS EXEMPLARY
+
+| Criterion | Status |
+|-----------|--------|
+| Unsafe code | **ZERO** — `#![forbid(unsafe_code)]` on all crates |
+| Production mocks | **ZERO** — all Mock/Stub types inside `#[cfg(test)]` |
+| TODOs / FIXMEs | **ZERO** |
+| Dead dependencies | **ZERO** |
+| tokio "full" in prod | **ZERO** — minimal features only |
+| Hardcoded primal names in prod | **ZERO** — all use `primal_names` constants |
+| External C dependencies | **ZERO** — pure Rust stack (blake3 pure, flate2 rust_backend, rustix) |
+| Dep tree (binary) | ~574 unique crates — lean for multi-protocol orchestrator |
+
+### Lint Annotation Precision
+
+| File | Change |
+|------|--------|
+| `crates/biomeos-atomic-deploy/src/neural_router/weights/scoring.rs` | Narrowed module-level `#[expect(dead_code)]` to per-constant annotations on `VPS` and `CROSS_SEGMENT` only |
+
+### Documentation Updates
+
+| File | Change |
+|------|--------|
+| `CURRENT_STATUS.md` | Updated to Wave 157g: metrics, posture, test counts (2691+), graph count (64) |
+| `scripts/README.md` | Added `neural-api-test.sh` as dev-only/deprecated, restructured into Active/Dev-Only sections |
+
+### Archive Review
+
+| Item | Decision |
+|------|----------|
+| `visualizations/*.dot/*.json/*.svg` | **KEEP** — fossil record, small files (Jan 2026 architecture diagrams) |
+| `visualizations/*.png` | Already removed (prev session) + gitignored |
+| `tmp-cloud-init/` | Gitignored, root-owned — flagged for manual `sudo rm` (prev session) |
+| `scripts/neural-api-test.sh` | **KEEP** — dev-only Wave 157a harness, documented as superseded |
+| `scripts/build_primals_for_testing.sh` | **KEEP** — dev-only, still used for local builds |
+| `docs/architecture/` | **KEEP** — single doc (GENOME_DISTRIBUTION_ARCHITECTURE.md), still relevant |
+
+### Verification
+
+- `cargo check`: clean
+- `cargo clippy --all-targets`: clean
+- `cargo test --lib -p biomeos-atomic-deploy -p biomeos-types`: **2691 pass, 0 fail**
