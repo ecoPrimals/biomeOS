@@ -313,3 +313,127 @@ async fn dispatch_tower_atomic_relay_failure_without_fallback_errors() {
     })
     .await;
 }
+
+/// Regression test for the "category shadow" bug (Wave 157i).
+///
+/// When `braid.verify` is registered in the translation registry (from TOML)
+/// but "braid" is NOT registered as a category in the capability router,
+/// the call must still succeed by using the translation's own socket endpoint.
+/// Previously, `discover_capability("braid")` would fail and the entire call
+/// would error out with "not registered" — even though the translation had
+/// all the information needed to route correctly.
+#[tokio::test]
+async fn dispatch_translation_socket_fallback_when_category_not_registered() {
+    temp_env::async_with_vars(EMPTY_ENV, async {
+        let dir = TempDir::new().expect("tempdir");
+        let sweetgrass_sock = dir.path().join("sweetgrass-test.sock");
+
+        let _sweetgrass_server = MockJsonRpcServer::spawn_echo_success(
+            &sweetgrass_sock,
+            json!({ "verified": true, "braid_id": "abc123" }),
+        )
+        .await;
+
+        let handler = make_handler();
+
+        // Prevent lazy rescan from discovering live system sockets
+        handler
+            .router
+            .lazy_rescan_attempted
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+
+        // Register braid.verify in the TRANSLATION registry (simulating TOML load).
+        // Crucially, we do NOT register "braid" as a category in the capability router.
+        {
+            let mut registry = handler.translation_registry.write().await;
+            registry.register_translation(
+                "braid.verify",
+                "sweetgrass",
+                "braid.verify",
+                sweetgrass_sock.to_str().unwrap(),
+                None,
+            );
+            registry.register_translation(
+                "braid.list",
+                "sweetgrass",
+                "braid.list",
+                sweetgrass_sock.to_str().unwrap(),
+                None,
+            );
+        }
+
+        // Call braid.verify — should succeed via translation socket fallback.
+        let params = Some(json!({
+            "capability": "braid",
+            "operation": "verify",
+            "args": { "braid_id": "abc123" }
+        }));
+        let out = handler
+            .call(&params)
+            .await
+            .expect("braid.verify should route via translation socket when category is missing");
+        assert_eq!(out.result["verified"], true);
+
+        // Also test braid.list
+        let params = Some(json!({
+            "capability": "braid",
+            "operation": "list",
+            "args": {}
+        }));
+        let out = handler
+            .call(&params)
+            .await
+            .expect("braid.list should route via translation socket when category is missing");
+        assert_eq!(out.result["verified"], true);
+    })
+    .await;
+}
+
+/// Validates that translation socket fallback includes routing trace data.
+#[tokio::test]
+async fn dispatch_translation_socket_fallback_routing_trace() {
+    temp_env::async_with_vars(EMPTY_ENV, async {
+        let dir = TempDir::new().expect("tempdir");
+        let sweetgrass_sock = dir.path().join("sweetgrass-trace.sock");
+
+        let _sweetgrass_server = MockJsonRpcServer::spawn_echo_success(
+            &sweetgrass_sock,
+            json!({ "ok": true }),
+        )
+        .await;
+
+        let handler = make_handler();
+
+        // Prevent lazy rescan from discovering live system sockets
+        handler
+            .router
+            .lazy_rescan_attempted
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+
+        {
+            let mut registry = handler.translation_registry.write().await;
+            registry.register_translation(
+                "braid.verify",
+                "sweetgrass",
+                "braid.verify",
+                sweetgrass_sock.to_str().unwrap(),
+                None,
+            );
+        }
+
+        let params = Some(json!({
+            "capability": "braid",
+            "operation": "verify",
+            "args": {},
+            "_routing_trace": true
+        }));
+        let out = handler
+            .call(&params)
+            .await
+            .expect("braid.verify with trace");
+        let trace = out.routing_trace.expect("trace requested");
+        assert_eq!(trace["provider"], "sweetgrass");
+        assert_eq!(trace["method"], "braid.verify");
+    })
+    .await;
+}

@@ -2,13 +2,26 @@
 // Copyright 2025-2026 ecoPrimals Project
 
 //! Translation-registry routing for `capability.call`.
+//!
+//! Resolution order:
+//! 1. Try dynamic capability discovery (router registry) for fresh endpoints
+//! 2. Fall back to the translation's own socket (TOML-resolved at load time)
+//! 3. Try Songbird mesh relay as last resort
+//!
+//! This prevents category registry gaps from shadowing explicit TOML translations.
+//! The translation registry is self-sufficient for routing — if it resolved a socket
+//! at load time, that socket is authoritative even when the capability registry
+//! doesn't have a matching category entry.
 
 use super::super::super::helpers::elapsed_ms_since;
 use super::super::super::{CapabilityCallOutcome, CapabilityHandler};
 use super::super::preamble::CallContext;
 use crate::capability_translation::CapabilityTranslation;
 use crate::handlers::capability_routing::{RoutingPhase, routing_trace_value};
+use crate::neural_router::{DiscoveredAtomic, DiscoveredPrimal};
 use anyhow::Result;
+use biomeos_core::TransportEndpoint;
+use std::sync::Arc;
 use tracing::{debug, trace};
 
 /// Trace label for dispatches routed through the mesh gateway.
@@ -32,9 +45,32 @@ impl CapabilityHandler {
 
         let atomic = match self.router.discover_capability(&ctx.capability).await {
             Ok(a) => a,
-            Err(_local_err) => {
-                // Translation exists but no local provider — try Songbird mesh
-                if let Some(mesh_result) = self
+            Err(_discovery_err) => {
+                // Discovery failed — the capability registry doesn't have a category
+                // entry for this domain. Use the translation's own socket endpoint
+                // which was resolved at TOML load time. This is the fix for the
+                // "category shadow" bug where explicit TOML translations (braid.verify,
+                // braid.list, etc.) become unroutable when no graph registers their
+                // domain as a category in the capability registry.
+                if let Some(endpoint) = TransportEndpoint::parse(&trans.socket) {
+                    debug!(
+                        "   Discovery miss for '{}', using translation socket: {}",
+                        ctx.capability,
+                        endpoint.display_string()
+                    );
+                    DiscoveredAtomic {
+                        capability: Arc::from(ctx.capability.as_str()),
+                        primals: vec![DiscoveredPrimal {
+                            name: Arc::from(provider_from_trans.as_str()),
+                            endpoint: endpoint.clone(),
+                            capabilities: vec![semantic_name.to_string()],
+                            healthy: true,
+                            last_check: chrono::Utc::now(),
+                        }],
+                        atomic_type: None,
+                        primary_endpoint: endpoint,
+                    }
+                } else if let Some(mesh_result) = self
                     .try_songbird_mesh_dispatch(
                         &ctx.capability,
                         &ctx.operation,
@@ -61,8 +97,9 @@ impl CapabilityHandler {
                         result: mesh_result?,
                         routing_trace,
                     });
+                } else {
+                    return Err(_discovery_err);
                 }
-                return Err(_local_err);
             }
         };
 

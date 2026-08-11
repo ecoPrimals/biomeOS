@@ -458,3 +458,46 @@ Fixed test `capabilities_match_registry_toml` that validated all providers in `c
 - `cargo check`: clean
 - `cargo clippy --all-targets`: clean
 - `cargo test --lib -p biomeos-atomic-deploy -p biomeos-types`: **2691 pass, 0 fail**
+
+---
+
+## Addendum 13 — Wave 157i: Category Shadow Fix (Aug 11, 2026)
+
+### Problem: Category Registration Shadows Explicit TOML Translations
+
+**Reported by**: overwatch (Wave 157i POST-PANDEMIC CASCADE)
+**Symptoms**: `braid.verify` and `braid.list` not routable via Neural API `capability.call`. Direct socket calls to sweetGrass work (0.4ms).
+
+**Root Cause**: `dispatch_with_translation` in the capability.call handler has the correct translation (provider: sweetgrass, method: braid.verify, socket: /path/to/sweetgrass.sock) but then calls `discover_capability("braid")` to resolve the endpoint. The **translation registry** and the **capability registry** (router) are separate systems:
+
+- Translation registry (TOML): maps semantic names → provider + method + socket
+- Capability registry (router): maps category names → runtime endpoint (populated by graph loading)
+
+When "braid" isn't registered as a category in the router's capability registry (depends on graph loading), `discover_capability("braid")` fails through all 6 resolution steps. The call then falls through to mesh dispatch or errors out — despite the translation already having the correct socket.
+
+**Fix**: When `discover_capability` fails in the translation path, construct the endpoint directly from the translation's own socket (resolved at TOML load time). The translation registry is self-sufficient for routing — no category registration required.
+
+| File | Change |
+|------|--------|
+| `handlers/capability/call/dispatch/translation.rs` | Added translation-socket fallback when discovery fails; new imports for `TransportEndpoint`, `DiscoveredAtomic`, `DiscoveredPrimal` |
+| `handlers/capability/call/dispatch_tests.rs` | +2 tests: `dispatch_translation_socket_fallback_when_category_not_registered`, `dispatch_translation_socket_fallback_routing_trace` |
+
+### Resolution Order (After Fix)
+
+```text
+capability.call("braid.verify") →
+  1. Translation registry lookup: braid.verify → sweetgrass (✓ FOUND)
+  2. dispatch_with_translation:
+     a. Try discover_capability("braid") for fresh endpoint
+     b. If discovery fails → use translation's socket directly (NEW)
+     c. If socket unavailable → try mesh relay
+  3. Forward braid.verify to sweetgrass endpoint
+```
+
+### Verification
+
+- `cargo check`: clean
+- `cargo clippy --all-targets`: 0 warnings
+- `cargo test --lib -p biomeos-atomic-deploy`: **1602 pass, 0 fail** (+2 new)
+- `cargo test --lib -p biomeos-types`: **1091 pass, 0 fail**
+- Total: **2693 pass, 0 fail**

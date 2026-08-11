@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
-**Updated**: August 10, 2026
-**Version**: v4.57 (Wave 157g — STADIAL SHIFT, G72 Dependency Pandemic)
-**Posture**: EXEMPLAR. 4-gate gossip mesh LIVE. Multi-composition orchestration SHIPPED. G72 audit CLEAN. biomeOS is the lean reference pattern — 0 P0, 0 P1, 0 P2.
+**Updated**: August 11, 2026
+**Version**: v4.57 (Wave 157i — POST-PANDEMIC CASCADE, Category Shadow Fix)
+**Posture**: EXEMPLAR. 5-gate gossip mesh LIVE. G72 Tier 1 COMPLETE (11/11, ~155+ crates fleet-wide). Category shadow fix SHIPPED. biomeOS is the lean reference pattern — 0 P0, 0 P1, 0 P2.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -11,7 +11,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Tests | 2,691+ (biomeos-atomic-deploy: 1600, biomeos-types: 1091) pass, 0 failures |
+| Tests | 2,693+ (biomeos-atomic-deploy: 1602, biomeos-types: 1091) pass, 0 failures |
 | Clippy | 0 warnings (pedantic+nursery, --all-targets) |
 | Unsafe blocks | 0 (`#![forbid(unsafe_code)]` on all crates) |
 | C dependencies | 0 (pure Rust stack: blake3 pure, flate2 rust_backend, rustix zero-libc) |
@@ -95,6 +95,8 @@
 | **Hot-path Arc\<str\> (DashMap key optimization)** | v4.57 | Wave 156j |
 | **Flaky test fix (env-isolated discovery tests)** | v4.57 | Wave 156j |
 | **G65 protocol negotiation (single-socket, 10 tests)** | v4.57 | Wave 156m |
+| **Category shadow fix (translation→socket fallback)** | v4.57 | Wave 157i |
+| **Composition.orchestrate (multi-tier sequencing)** | v4.57 | Wave 157a |
 
 ---
 
@@ -111,7 +113,13 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 ## Posture
 
-biomeOS is in **STAGE 2 NEURAL API ACTIVATION** (G67). G64+G65+G66 COMPLETE (cephalization trilogy). G22 COMPLETE. ironGate Phase 1 OPERATIONALLY READY.
+biomeOS is in **STAGE 2 NEURAL API ACTIVATION** (G67). G64+G65+G66 COMPLETE (cephalization trilogy). G22 COMPLETE. G72 Tier 1 CLEAN. 5-gate gossip mesh ACTIVE. Category shadow FIXED.
+
+**Wave 157i — POST-PANDEMIC CASCADE (Aug 11, 2026)**:
+- **Category shadow fix**: Translation registry now self-sufficient — explicit TOML translations (braid.verify, braid.list, etc.) route correctly without needing category registration in the capability router
+- **G72 Tier 1 VERIFIED**: biomeOS already minimal Tokio, 0 dead deps, pure Rust stack
+- **5-gate gossip mesh**: eastGate, sporeGate, strandGate, westGate, ironGate all ACTIVE
+- **graftGate**: 15/15 primals compiled on aarch64-apple-darwin, WG LIVE at 10.13.37.13
 
 **G67 Neural API Activation — Stage 2 (Wave 157a)**:
 - **N1 DONE**: Forwarding fix — pool path for `capability.call`, outer timeout for escalation (`ffed2c5b`)
