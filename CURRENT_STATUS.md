@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
 **Updated**: August 11, 2026
-**Version**: v4.57 (Wave 157i — POST-PANDEMIC CASCADE, Category Shadow Fix)
-**Posture**: EXEMPLAR. 5-gate gossip mesh LIVE. G72 Tier 1 COMPLETE (11/11, ~155+ crates fleet-wide). Category shadow fix SHIPPED. biomeOS is the lean reference pattern — 0 P0, 0 P1, 0 P2.
+**Version**: v4.57 (Wave 157i — POST-PANDEMIC CASCADE, Composition Lifecycle)
+**Posture**: EXEMPLAR. 5-gate gossip mesh LIVE. G72 Tier 1 COMPLETE (11/11, ~155+ crates fleet-wide). Category shadow fix SHIPPED. Composition lifecycle (deploy→gossip→verify) WIRED. biomeOS is the lean reference pattern — 0 P0, 0 P1, 0 P2.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -11,7 +11,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Tests | 2,693+ (biomeos-atomic-deploy: 1602, biomeos-types: 1091) pass, 0 failures |
+| Tests | 2,695+ (biomeos-atomic-deploy: 1604, biomeos-types: 1091) pass, 0 failures |
 | Clippy | 0 warnings (pedantic+nursery, --all-targets) |
 | Unsafe blocks | 0 (`#![forbid(unsafe_code)]` on all crates) |
 | C dependencies | 0 (pure Rust stack: blake3 pure, flate2 rust_backend, rustix zero-libc) |
@@ -23,7 +23,7 @@
 | Formatting | PASS (rustfmt clean) |
 | Cross-arch | x86_64-unknown-linux-musl + x86_64-pc-windows-gnu + aarch64 (partial) |
 | Workspace crates | 26 |
-| Signal graphs | 64 |
+| Signal graphs | 65 |
 | Capability domains | 27 (320+ translations) |
 | Mocks in prod | 0 (all test-only) |
 | panic! in prod | 0 |
@@ -96,6 +96,7 @@
 | **Flaky test fix (env-isolated discovery tests)** | v4.57 | Wave 156j |
 | **G65 protocol negotiation (single-socket, 10 tests)** | v4.57 | Wave 156m |
 | **Category shadow fix (translation→socket fallback)** | v4.57 | Wave 157i |
+| **Composition lifecycle (deploy→gossip→verify pipeline)** | v4.57 | Wave 157i |
 | **Composition.orchestrate (multi-tier sequencing)** | v4.57 | Wave 157a |
 
 ---
@@ -116,6 +117,8 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 biomeOS is in **STAGE 2 NEURAL API ACTIVATION** (G67). G64+G65+G66 COMPLETE (cephalization trilogy). G22 COMPLETE. G72 Tier 1 CLEAN. 5-gate gossip mesh ACTIVE. Category shadow FIXED.
 
 **Wave 157i — POST-PANDEMIC CASCADE (Aug 11, 2026)**:
+- **Composition lifecycle (deploy→register→gossip→verify)**: `composition.orchestrate` now wires the full atomic lifecycle — post-deploy gossip advertisement via swarmVine + composition validation via primalSpring. Both steps are best-effort/graceful (no hard failure when swarmVine or primalSpring unavailable).
+- **Signal graph**: `graphs/signals/composition_lifecycle.toml` — formalizes the deploy→register→gossip→verify pipeline as a reusable signal graph for primalSpring integration testing.
 - **Category shadow fix**: Translation registry now self-sufficient — explicit TOML translations (braid.verify, braid.list, etc.) route correctly without needing category registration in the capability router
 - **G72 Tier 1 VERIFIED**: biomeOS already minimal Tokio, 0 dead deps, pure Rust stack
 - **5-gate gossip mesh**: eastGate, sporeGate, strandGate, westGate, ironGate all ACTIVE

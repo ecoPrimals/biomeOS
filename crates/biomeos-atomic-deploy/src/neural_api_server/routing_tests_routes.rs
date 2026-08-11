@@ -419,3 +419,93 @@ async fn test_handle_request_composition_orchestrate_missing_params() {
         "missing composition param should be an error"
     );
 }
+
+#[tokio::test]
+async fn test_orchestrate_lifecycle_no_gossip_verify_on_deploy_failure() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"composition.orchestrate","params":{"composition":"tower"},"id":83}"#;
+    let result = server.handle_request_json(req).await;
+    let inner = &result["result"];
+    assert_eq!(
+        inner["completed"], false,
+        "deploy should fail without graph files"
+    );
+    assert!(
+        inner.get("gossip").is_none(),
+        "gossip must NOT be present when deploy fails"
+    );
+    assert!(
+        inner.get("verify").is_none(),
+        "verify must NOT be present when deploy fails"
+    );
+}
+
+#[tokio::test]
+async fn test_orchestrate_lifecycle_includes_gossip_and_verify_on_success() {
+    use crate::lifecycle_manager::{
+        HealthConfig, LifecycleState, ManagedPrimal, PrimalMetrics, ResurrectionConfig,
+    };
+    use std::path::PathBuf;
+
+    let (server, _temp) = create_test_server();
+
+    // Register a tower-capable primal as Active so composition_health reports "ok"
+    // and orchestrate skips deployment (already healthy).
+    let now = chrono::Utc::now();
+    let tower_primal = ManagedPrimal {
+        name: "beardog".to_string(),
+        family_id: "test_family".to_string(),
+        socket_path: PathBuf::from("/tmp/test-beardog.sock"),
+        pid: Some(1234),
+        state: LifecycleState::Active {
+            since: now,
+            last_health_check: now,
+        },
+        deployment_node: Some(crate::neural_graph::GraphNode {
+            id: "beardog".to_string(),
+            capabilities: vec![
+                "crypto.encrypt".to_string(),
+                "security.verify".to_string(),
+                "discovery.announce".to_string(),
+            ],
+            ..Default::default()
+        }),
+        binary_path: None,
+        node_id: None,
+        depends_on: vec![],
+        depended_by: vec![],
+        boot_order_index: None,
+        health_config: HealthConfig::default(),
+        resurrection_config: ResurrectionConfig::default(),
+        metrics: PrimalMetrics::default(),
+    };
+
+    {
+        let manager = server.lifecycle_handler.manager.read().await;
+        let mut primals = manager.primals.write().await;
+        primals.insert("beardog".to_string(), tower_primal);
+    }
+
+    let req = r#"{"jsonrpc":"2.0","method":"composition.orchestrate","params":{"composition":"tower"},"id":84}"#;
+    let result = server.handle_request_json(req).await;
+    let inner = &result["result"];
+    assert_eq!(inner["completed"], true, "tower should be skipped (already healthy)");
+    assert!(
+        inner.get("gossip").is_some(),
+        "orchestrate success must include gossip lifecycle step"
+    );
+    assert!(
+        inner.get("verify").is_some(),
+        "orchestrate success must include verify lifecycle step"
+    );
+    let gossip_status = inner["gossip"]["status"].as_str().unwrap_or("");
+    assert!(
+        gossip_status == "skipped" || gossip_status == "unavailable",
+        "without swarmVine, gossip should be skipped/unavailable, got: {gossip_status}"
+    );
+    let verify_status = inner["verify"]["status"].as_str().unwrap_or("");
+    assert!(
+        verify_status == "skipped" || verify_status == "unavailable",
+        "without primalSpring, verify should be skipped/unavailable, got: {verify_status}"
+    );
+}

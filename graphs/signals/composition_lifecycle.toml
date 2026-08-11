@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Atomic Signal: meta.composition_lifecycle
+#
+# The deploy → register → gossip → verify lifecycle for atomic compositions.
+# Formalizes the post-deploy pipeline: after a composition graph executes,
+# capabilities are registered locally, advertised via swarmVine gossip,
+# and verified by primalSpring integration testing.
+#
+# This signal can be invoked standalone (graph.execute) or is implicitly
+# run by composition.orchestrate after each tier deploys successfully.
+#
+# primalSpring contract: composition.validate receives { composition, tiers, gate, mode }
+# and returns { valid: bool, checks: [...] } with cross-primal IPC verification.
+
+[graph]
+id = "composition_lifecycle"
+name = "Composition Deploy Lifecycle"
+description = "Deploy → register → gossip → verify pipeline for atomic compositions"
+version = "1.0.0"
+coordination = "sequential"
+signal_tier = "meta"
+signal_name = "composition_lifecycle"
+
+[graph.metadata]
+particle = "meta"
+security_model = "btsp_enforced"
+transport = "platform_native"
+secure_by_default = true
+composition_model = "lifecycle"
+
+[[graph.nodes]]
+name = "deploy_composition"
+binary = "biomeos"
+order = 1
+required = true
+spawn = false
+by_capability = "orchestration"
+capabilities = ["composition.start", "graph.execute"]
+
+[[graph.nodes]]
+name = "register_capabilities"
+binary = "biomeos"
+order = 2
+required = true
+spawn = false
+depends_on = ["deploy_composition"]
+by_capability = "orchestration"
+capabilities = ["discovery.announce", "capability.register"]
+
+[[graph.nodes]]
+name = "gossip_advertise"
+binary = "swarmvine"
+order = 3
+required = false
+spawn = false
+depends_on = ["register_capabilities"]
+by_capability = "gossip"
+capabilities = ["gossip.advertise"]
+
+[[graph.nodes]]
+name = "verify_in_mesh"
+binary = "primalspring"
+order = 4
+required = false
+spawn = false
+depends_on = ["register_capabilities"]
+by_capability = "integration"
+capabilities = ["composition.validate", "convergence.check"]
+
+[[graph.nodes]]
+name = "audit_lifecycle"
+binary = "skunkbat"
+order = 5
+required = false
+spawn = false
+depends_on = ["verify_in_mesh"]
+by_capability = "defense"
+capabilities = ["security.audit_log"]

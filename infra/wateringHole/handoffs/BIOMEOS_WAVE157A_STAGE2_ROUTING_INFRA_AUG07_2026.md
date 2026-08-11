@@ -501,3 +501,102 @@ capability.call("braid.verify") →
 - `cargo test --lib -p biomeos-atomic-deploy`: **1602 pass, 0 fail** (+2 new)
 - `cargo test --lib -p biomeos-types`: **1091 pass, 0 fail**
 - Total: **2693 pass, 0 fail**
+
+---
+
+## Addendum 14 — Wave 157i: Composition Lifecycle (deploy→register→gossip→verify)
+
+**Date**: August 11, 2026
+**Team**: biomeOS × primalSpring collaboration
+
+### Problem: No Post-Deploy Gossip or Verification
+
+The `composition.orchestrate` handler sequences deploy graphs (tower→nest→node) and calls `register_capabilities_from_graph()` for local registration, but:
+
+1. **No gossip emission**: Deployed capabilities were never advertised to swarmVine. Cross-gate discovery relies on `gossip.query` but nothing wrote `capability.advertise` entries.
+2. **No verification step**: After deployment, no call to `composition.validate` (primalSpring) or any cross-primal IPC validation.
+3. **Producer/consumer asymmetry**: The gossip *consumer* infrastructure was fully built (`try_gossip_capability_lookup`, targeted mesh dispatch, translation registry) but the *producer* half (advertise after deploy) was missing.
+
+### Solution: Best-Effort Lifecycle Pipeline
+
+Extended `composition.orchestrate` with two post-deploy steps:
+
+```text
+composition.orchestrate("tower") →
+  1. For each tier: health-gate → composition.start → graph.execute  (existing)
+  2. POST-DEPLOY: gossip.advertise (swarmVine)                       (NEW)
+  3. POST-DEPLOY: composition.validate (primalSpring)                (NEW)
+```
+
+Both new steps are **best-effort** — they don't block the orchestration result. If swarmVine or primalSpring aren't available (common during bootstrap), the response reports `status: "skipped"` or `status: "unavailable"` gracefully.
+
+### Implementation
+
+| File | Change |
+|------|--------|
+| `neural_api_server/routing.rs` | `orchestrate_composition`: track deployed tiers, call gossip + verify after loop; +2 helper methods: `advertise_composition_to_gossip`, `verify_composition_in_mesh` |
+| `neural_api_server/routing_tests_routes.rs` | +2 tests: `test_orchestrate_lifecycle_no_gossip_verify_on_deploy_failure`, `test_orchestrate_lifecycle_includes_gossip_and_verify_on_success` |
+| `graphs/signals/composition_lifecycle.toml` | New signal graph formalizing the deploy→register→gossip→verify→audit pipeline |
+
+### Response Shape (After)
+
+```json
+{
+  "target": "tower",
+  "completed": true,
+  "steps": [{"composition": "tower", "action": "skipped|executed", ...}],
+  "gossip": {"status": "advertised|skipped|unavailable", ...},
+  "verify": {"status": "verified|skipped|unavailable", ...}
+}
+```
+
+### primalSpring Contract
+
+`composition.validate` receives:
+```json
+{
+  "composition": "tower|nest|node|nucleus",
+  "tiers": ["tower"],
+  "gate": "<family_id>",
+  "mode": "post_deploy"
+}
+```
+
+Expected return: `{ valid: bool, checks: [...] }` with cross-primal IPC verification results. primalSpring determines which probes to run based on the composition type and gate identity.
+
+### Gossip Advertisement
+
+`gossip.advertise` receives:
+```json
+{
+  "topic": "tower",
+  "key": "composition.available:<gate>:<composition>",
+  "value": "{\"gate\":\"<id>\",\"composition\":\"tower\",\"tiers\":[\"tower\"],\"timestamp\":\"...\"}",
+  "ttl_secs": 300
+}
+```
+
+This enables cross-gate composition discovery via `gossip.query(topic="tower", key_prefix="composition.available:")`.
+
+### Signal Graph: `composition_lifecycle.toml`
+
+Nodes:
+1. `deploy_composition` (biomeos, required) — composition.start + graph.execute
+2. `register_capabilities` (biomeos, required) — discovery.announce
+3. `gossip_advertise` (swarmvine, optional) — gossip.advertise
+4. `verify_in_mesh` (primalspring, optional) — composition.validate
+5. `audit_lifecycle` (skunkbat, optional) — security.audit_log
+
+### Verification
+
+- `cargo check`: clean
+- `cargo clippy --all-targets`: 0 warnings
+- `cargo test --lib -p biomeos-atomic-deploy`: **1604 pass, 0 fail** (+2 new)
+- Total: **2695 pass, 0 fail**
+
+### Next: primalSpring Team Coordination
+
+For primalSpring to complete the lifecycle:
+1. **Implement `composition.validate`**: Accept the contract above, run tier-appropriate probes (e.g. `tower.health` signal, `nest.verify` signal), return structured results
+2. **Subscribe to gossip advertisements**: `gossip.subscribe(topic="tower", key_prefix="composition.available:")` to track live compositions across gates
+3. **Convergence checking**: `convergence.check` should incorporate composition lifecycle state (deployed + gossiped + verified = converged)

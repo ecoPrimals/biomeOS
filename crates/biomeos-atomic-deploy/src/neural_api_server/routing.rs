@@ -668,6 +668,11 @@ impl NeuralApiServer {
     /// For `nucleus`, this means: tower → nest + node (parallel) → nucleus_complete.
     /// Each prerequisite is started via `composition.start { execute: true }` only if
     /// its health gate is not already satisfied. Returns results for each step.
+    ///
+    /// Lifecycle: deploy → register (local) → gossip (advertise) → verify (primalSpring).
+    /// Gossip and verify are best-effort — failures are logged but don't block
+    /// the orchestration result. This enables graceful degradation when swarmVine
+    /// or primalSpring aren't available.
     async fn orchestrate_composition(
         &self,
         params: &Option<Value>,
@@ -695,6 +700,7 @@ impl NeuralApiServer {
 
         let user_params = params.get("params").cloned().unwrap_or(json!({}));
         let mut steps = Vec::new();
+        let mut deployed_tiers: Vec<&str> = Vec::new();
 
         for composition in &sequence {
             let step_params = Some(json!({
@@ -716,6 +722,7 @@ impl NeuralApiServer {
                     "action": "skipped",
                     "reason": "already healthy",
                 }));
+                deployed_tiers.push(composition);
                 continue;
             }
 
@@ -730,12 +737,15 @@ impl NeuralApiServer {
                 }));
                 let exec_result = self.graph_handler.execute(&graph_params).await;
                 match exec_result {
-                    Ok(v) => steps.push(json!({
-                        "composition": composition,
-                        "action": "executed",
-                        "graph": graph_id,
-                        "result": v,
-                    })),
+                    Ok(v) => {
+                        steps.push(json!({
+                            "composition": composition,
+                            "action": "executed",
+                            "graph": graph_id,
+                            "result": v,
+                        }));
+                        deployed_tiers.push(composition);
+                    }
                     Err(e) => {
                         steps.push(json!({
                             "composition": composition,
@@ -766,11 +776,93 @@ impl NeuralApiServer {
             }
         }
 
+        // Post-deploy: gossip advertise deployed capabilities to swarmVine.
+        // Best-effort — swarmVine may not be available during bootstrap.
+        let gossip_result = self
+            .advertise_composition_to_gossip(target, &deployed_tiers)
+            .await;
+
+        // Post-deploy: verify composition via primalSpring (integration primal).
+        // Best-effort — primalSpring may not be deployed yet.
+        let verify_result = self
+            .verify_composition_in_mesh(target, &deployed_tiers)
+            .await;
+
         Ok(json!({
             "target": target,
             "completed": true,
             "steps": steps,
+            "gossip": gossip_result,
+            "verify": verify_result,
         }))
+    }
+
+    /// Advertise deployed composition capabilities to swarmVine gossip mesh.
+    ///
+    /// Injects capability advertisements for each deployed tier so that
+    /// cross-gate discovery can find this gate's available compositions.
+    async fn advertise_composition_to_gossip(
+        &self,
+        target: &str,
+        deployed_tiers: &[&str],
+    ) -> Value {
+        let registry = self.translation_registry.read().await;
+
+        if !registry.has_capability("gossip.advertise") {
+            return json!({ "status": "skipped", "reason": "gossip.advertise not available" });
+        }
+
+        let gate_id = &self.family_id;
+        let advertise_params = json!({
+            "topic": "tower",
+            "key": format!("composition.available:{}:{}", gate_id, target),
+            "value": json!({
+                "gate": gate_id,
+                "composition": target,
+                "tiers": deployed_tiers,
+                "timestamp": chrono::Utc::now().to_rfc3339(),
+            }).to_string(),
+            "ttl_secs": 300,
+        });
+
+        match registry.call_capability("gossip.advertise", advertise_params).await {
+            Ok(v) => json!({ "status": "advertised", "result": v }),
+            Err(e) => {
+                tracing::debug!("Gossip advertise best-effort failed: {e}");
+                json!({ "status": "unavailable", "error": e.to_string() })
+            }
+        }
+    }
+
+    /// Verify composition health via primalSpring integration testing.
+    ///
+    /// Calls `composition.validate` which routes to primalSpring for
+    /// cross-primal IPC verification after deployment.
+    async fn verify_composition_in_mesh(
+        &self,
+        target: &str,
+        deployed_tiers: &[&str],
+    ) -> Value {
+        let registry = self.translation_registry.read().await;
+
+        if !registry.has_capability("composition.validate") {
+            return json!({ "status": "skipped", "reason": "composition.validate not available" });
+        }
+
+        let validate_params = json!({
+            "composition": target,
+            "tiers": deployed_tiers,
+            "gate": &self.family_id,
+            "mode": "post_deploy",
+        });
+
+        match registry.call_capability("composition.validate", validate_params).await {
+            Ok(v) => json!({ "status": "verified", "result": v }),
+            Err(e) => {
+                tracing::debug!("Composition verify best-effort failed: {e}");
+                json!({ "status": "unavailable", "error": e.to_string() })
+            }
+        }
     }
 }
 
