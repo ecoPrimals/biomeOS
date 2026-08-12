@@ -25,6 +25,9 @@
 //! - `nest.capabilities` — list all available nest capabilities + translations
 
 use anyhow::Result;
+use biomeos_types::primal_names::{
+    BEARDOG, LOAMSPINE, NESTGATE, RHIZOCRYPT, SONGBIRD, SWEETGRASS,
+};
 use serde_json::{Value, json};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -44,32 +47,32 @@ struct NestDomain {
 const NEST_DOMAINS: &[NestDomain] = &[
     NestDomain {
         name: "security",
-        primal_names: &["beardog", "crypto", "security", "beacon", "ed25519", "x25519"],
+        primal_names: &[BEARDOG, "crypto", "security", "beacon", "ed25519", "x25519"],
         capability_prefixes: &["crypto.", "security.", "beacon."],
     },
     NestDomain {
         name: "discovery",
-        primal_names: &["songbird", "network", "mesh"],
+        primal_names: &[SONGBIRD, "network", "mesh"],
         capability_prefixes: &["discovery.", "relay.", "network."],
     },
     NestDomain {
         name: "storage",
-        primal_names: &["nestgate", "permanence", "storage"],
+        primal_names: &[NESTGATE, "permanence", "storage"],
         capability_prefixes: &["storage.", "content."],
     },
     NestDomain {
         name: "dag",
-        primal_names: &["rhizocrypt", "dag"],
+        primal_names: &[RHIZOCRYPT, "dag"],
         capability_prefixes: &["dag."],
     },
     NestDomain {
         name: "ledger",
-        primal_names: &["loamspine", "ledger"],
+        primal_names: &[LOAMSPINE, "ledger"],
         capability_prefixes: &["spine.", "anchor.", "ledger."],
     },
     NestDomain {
         name: "attribution",
-        primal_names: &["sweetgrass", "attribution"],
+        primal_names: &[SWEETGRASS, "attribution"],
         capability_prefixes: &["braid.", "provenance.", "attribution."],
     },
 ];

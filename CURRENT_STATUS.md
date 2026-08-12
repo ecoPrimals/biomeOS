@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
-**Updated**: August 11, 2026
-**Version**: v4.57 (Wave 157i — POST-PANDEMIC CASCADE, Composition Lifecycle)
-**Posture**: EXEMPLAR. 5-gate gossip mesh LIVE. G72 Tier 1 COMPLETE (11/11, ~155+ crates fleet-wide). Category shadow fix SHIPPED. Composition lifecycle (deploy→gossip→verify) WIRED. biomeOS is the lean reference pattern — 0 P0, 0 P1, 0 P2.
+**Updated**: August 12, 2026
+**Version**: v4.57 (Wave 157k — Deep Debt Sweep, Routing Refactor, Topology Wiring)
+**Posture**: EXEMPLAR. 5-gate gossip mesh LIVE. G72 Tier 1 COMPLETE (11/11, ~155+ crates fleet-wide). Deep debt sweep COMPLETE: routing.rs split (882→682 LOC), topology 4-tier scoring WIRED, Arc::clone normalized, hardcoded primal names eliminated, redundant_clone suppression REMOVED, dep hygiene (tokio scoping, ureq narrowed, dedup serde_json). biomeOS is the lean reference pattern — 0 P0, 0 P1, 0 P2.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -11,11 +11,11 @@
 
 | Metric | Value |
 |--------|-------|
-| Tests | 2,697+ (biomeos-atomic-deploy: 1606, biomeos-types: 1091) pass, 0 failures |
-| Clippy | 0 warnings (pedantic+nursery, --all-targets) |
+| Tests | 2,698+ (biomeos-atomic-deploy: 1606, biomeos-types: 1091) pass, 0 failures |
+| Clippy | 0 warnings (pedantic+nursery, --all-targets, zero suppressed lints) |
 | Unsafe blocks | 0 (`#![forbid(unsafe_code)]` on all crates) |
 | C dependencies | 0 (pure Rust stack: blake3 pure, flate2 rust_backend, rustix zero-libc) |
-| Largest prod file | 844 LOC (main.rs — declarative CLI structs) |
+| Largest prod file | 682 LOC (routing.rs — after orchestration extraction) |
 | TODOs in prod | 0 |
 | Production unwraps | 0 (workspace lint enforced) |
 | Dead code | 0 (all staged code has `#[expect(dead_code, reason)]`) |
@@ -98,6 +98,8 @@
 | **Category shadow fix (translation→socket fallback)** | v4.57 | Wave 157i |
 | **Composition lifecycle (deploy→gossip→verify pipeline)** | v4.57 | Wave 157i |
 | **Composition.orchestrate (multi-tier sequencing)** | v4.57 | Wave 157a |
+| **P2 FIX: skunkBat spawn leak (rapid-restart detection)** | v4.57 | Wave 157k |
+| **Deep debt sweep (routing split, topology 4-tier, Arc::clone)** | v4.57 | Wave 157k |
 
 ---
 

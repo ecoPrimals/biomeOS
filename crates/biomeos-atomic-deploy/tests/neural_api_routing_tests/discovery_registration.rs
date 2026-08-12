@@ -17,10 +17,11 @@ async fn test_neural_router_creation() {
 async fn test_capability_discovery_no_primals() {
     let router = create_test_router();
 
-    // When no primals exist, discovery should return error
-    let result = router.discover_capability("secure_http").await;
+    // Category capabilities (secure_http) use fallback composite discovery which
+    // returns Ok even when no primals are found (graceful degradation).
+    // Use a non-category capability to test the error path.
+    let result = router.discover_capability("nonexistent.capability.xyz").await;
 
-    // Should return an error (no primals registered)
     assert!(result.is_err());
 }
 

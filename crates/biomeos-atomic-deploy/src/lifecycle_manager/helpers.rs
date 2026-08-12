@@ -4,6 +4,7 @@
 //! Lifecycle manager helpers: dependency graph, status, and task cloning
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use super::{LifecycleManager, LifecycleState, ManagedPrimal};
 
@@ -51,13 +52,13 @@ impl LifecycleManager {
     /// Clone for spawning async tasks
     pub(crate) fn clone_for_task(&self) -> Self {
         Self {
-            primals: self.primals.clone(),
+            primals: Arc::clone(&self.primals),
             family_id: self.family_id.clone(),
-            nucleation: self.nucleation.clone(),
+            nucleation: Arc::clone(&self.nucleation),
             health_checker: self.health_checker.clone(),
-            deployment_graphs: self.deployment_graphs.clone(),
+            deployment_graphs: Arc::clone(&self.deployment_graphs),
             health_check_interval: self.health_check_interval,
-            shutdown: self.shutdown.clone(),
+            shutdown: Arc::clone(&self.shutdown),
         }
     }
 }

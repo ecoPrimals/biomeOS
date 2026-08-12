@@ -115,11 +115,7 @@ impl LifecycleHandler {
 
         let existing = manager.get_primal_info(name).await;
         let (old_socket, old_pid, old_node) = match existing {
-            Some(info) => (
-                info.socket_path.clone(),
-                info.pid,
-                info.deployment_node.clone(),
-            ),
+            Some(info) => (info.socket_path, info.pid, info.deployment_node),
             None => {
                 return Ok(json!({
                     "reloaded": false,

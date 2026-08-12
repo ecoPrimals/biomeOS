@@ -29,6 +29,7 @@ mod listeners;
 pub(crate) mod protocol_negotiation;
 mod proxy;
 mod routing;
+mod routing_orchestration;
 mod rpc;
 mod server_lifecycle;
 mod translation_loader;
@@ -257,8 +258,7 @@ impl NeuralApiServer {
             executions.clone(),
         );
 
-        let lifecycle_handler =
-            LifecycleHandler::new(&family_id_str).with_executions(executions.clone());
+        let lifecycle_handler = LifecycleHandler::new(&family_id_str).with_executions(executions);
         // NOTE: when NUCLEUS starts the Neural API, it should call
         // .with_lifecycle_manager() to share its in-process manager instance.
 
@@ -269,7 +269,7 @@ impl NeuralApiServer {
             EscalationConfig::default(),
         )));
 
-        let protocol_handler = ProtocolHandler::new(living_graph.clone(), escalation_manager);
+        let protocol_handler = ProtocolHandler::new(living_graph, escalation_manager);
 
         let inference_handler = InferenceHandler::new(router.clone(), gate_registry);
 

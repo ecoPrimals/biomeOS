@@ -3,8 +3,10 @@
 
 //! Health monitoring: interval-based health checks and state transitions
 
-use anyhow::Result;
+use std::sync::Arc;
 use std::time::Instant;
+
+use anyhow::Result;
 use tracing::{debug, error, info, warn};
 
 use super::{LifecycleManager, LifecycleState};
@@ -20,8 +22,8 @@ impl LifecycleManager {
             self.health_check_interval
         );
 
-        let primals = self.primals.clone();
-        let shutdown = self.shutdown.clone();
+        let primals = Arc::clone(&self.primals);
+        let shutdown = Arc::clone(&self.shutdown);
         let _health_checker = self.health_checker.clone();
         let interval = self.health_check_interval;
         let manager = self.clone_for_task();

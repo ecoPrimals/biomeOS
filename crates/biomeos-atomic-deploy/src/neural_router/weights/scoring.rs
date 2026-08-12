@@ -31,9 +31,7 @@ pub(crate) const EXPLORATION_BONUS: f64 = 0.1;
 pub mod topology {
     pub const SAME_GATE: f64 = 1.0;
     pub const SAME_SEGMENT: f64 = 0.9;
-    #[expect(dead_code, reason = "wired when gate_id topology map is available")]
     pub const CROSS_SEGMENT: f64 = 0.7;
-    #[expect(dead_code, reason = "wired when gate_id topology map is available")]
     pub const VPS: f64 = 0.4;
     pub const WAN: f64 = 0.3;
 }
@@ -186,35 +184,30 @@ pub fn topology_affinity_for_endpoint(endpoint: &biomeos_core::TransportEndpoint
         TransportEndpoint::UnixSocket { .. } | TransportEndpoint::AbstractSocket { .. } => {
             topology::SAME_GATE
         }
-        TransportEndpoint::TcpSocket { host, .. } => {
-            if is_local_host(host) {
-                topology::SAME_GATE
-            } else if is_private_network(host) {
-                topology::SAME_SEGMENT
-            } else {
-                topology::WAN
-            }
-        }
-        TransportEndpoint::HttpJsonRpc { host, .. } => {
-            if is_local_host(host) {
-                topology::SAME_GATE
-            } else if is_private_network(host) {
-                topology::SAME_SEGMENT
-            } else {
-                topology::WAN
-            }
-        }
+        TransportEndpoint::TcpSocket { host, .. } => classify_host(host),
+        TransportEndpoint::HttpJsonRpc { host, .. } => classify_host(host),
     }
 }
 
-fn is_local_host(host: &str) -> bool {
-    matches!(
-        host,
-        "127.0.0.1" | "::1" | "localhost" | "0.0.0.0" | "[::1]"
-    )
+fn classify_host(host: &str) -> f64 {
+    if is_local_host(host) {
+        topology::SAME_GATE
+    } else if is_same_segment(host) {
+        topology::SAME_SEGMENT
+    } else if is_cross_segment(host) {
+        topology::CROSS_SEGMENT
+    } else if is_vps_network(host) {
+        topology::VPS
+    } else {
+        topology::WAN
+    }
 }
 
-fn is_private_network(host: &str) -> bool {
+fn is_same_segment(host: &str) -> bool {
+    host.starts_with("192.168.") || host.starts_with("fe80:")
+}
+
+fn is_cross_segment(host: &str) -> bool {
     host.starts_with("10.")
         || host.starts_with("172.16.")
         || host.starts_with("172.17.")
@@ -223,7 +216,16 @@ fn is_private_network(host: &str) -> bool {
         || host.starts_with("172.2")
         || host.starts_with("172.30.")
         || host.starts_with("172.31.")
-        || host.starts_with("192.168.")
         || host.starts_with("fd")
-        || host.starts_with("fe80:")
+}
+
+fn is_vps_network(host: &str) -> bool {
+    host.starts_with("169.254.") || host.starts_with("100.64.")
+}
+
+fn is_local_host(host: &str) -> bool {
+    matches!(
+        host,
+        "127.0.0.1" | "::1" | "localhost" | "0.0.0.0" | "[::1]"
+    )
 }

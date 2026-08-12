@@ -701,3 +701,65 @@ Added **rapid-restart detection** using a `last_resurrection_at` timestamp on `P
 - `cargo clippy --all-targets`: 0 warnings
 - `cargo test --lib -p biomeos-atomic-deploy`: **1606 pass, 0 fail** (+2 new)
 - Total: **2697 pass, 0 fail**
+
+---
+
+## Addendum 17 — Wave 157k: Deep Debt Sweep
+
+**Date**: August 12, 2026
+**Scope**: Codebase-wide deep debt reduction per ecoPrimals directive
+
+### Problem
+
+Broad technical debt accumulated across the biomeOS crate:
+1. `routing.rs` grew to 882 LOC — over the 800L threshold
+2. Hardcoded primal names in `nest_atomic.rs` and `discovery_gossip.rs`
+3. Crate-wide `clippy::redundant_clone` suppression hiding Arc misuse
+4. Topology scoring only had 3 tiers (same/segment/WAN) — 2 constants dead
+5. `tokio = "full"` in test-utils crate bloating compile times
+6. Duplicate `serde_json` dev-dep in biomeos-core
+7. `ureq` in workspace deps despite being used only in one crate's dev-deps
+8. Pre-existing stale test assertion (`discover_capability` behavior change)
+
+### Solution
+
+| Item | Action | LOC delta |
+|------|--------|-----------|
+| routing.rs | Extracted orchestration (compose+gossip+verify) → `routing_orchestration.rs` | 882→682 (−200) |
+| nest_atomic.rs | Import `primal_names::{BEARDOG,SONGBIRD,...}` — 6 constants replace 6 literals | 0 |
+| discovery_gossip.rs | Use `primal_names::SWARMVINE` constant | 0 |
+| Arc::clone | Fixed lifecycle_manager (monitoring, helpers, transitions) + neural_api_server mod | net 0 |
+| redundant_clone suppression | REMOVED from lib.rs — all callsites fixed | −3 lines |
+| Topology scoring | Wired all 4 tiers: same_gate/same_segment/cross_segment/vps/wan. Split `classify_host` from old flat function | +25 |
+| tokio scope | `biomeos-test-utils`: explicit features instead of "full" | 0 |
+| serde_json dup | Removed line 69 from biomeos-core Cargo.toml | −1 |
+| ureq | Moved from workspace deps to crate-local dev-dep | 0 |
+| Stale test | `test_capability_discovery_no_primals` — updated for graceful-degradation semantics | 0 |
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `neural_api_server/routing.rs` | Remove orchestrate methods (→ routing_orchestration.rs) |
+| `neural_api_server/routing_orchestration.rs` | **NEW**: extracted composition lifecycle helpers |
+| `neural_api_server/mod.rs` | Add `mod routing_orchestration`; remove last-use clones |
+| `handlers/nest_atomic.rs` | Import primal_names constants; replace 6 string literals |
+| `neural_router/discovery_gossip.rs` | Import+use `primal_names::SWARMVINE` |
+| `neural_router/weights/scoring.rs` | Wire 4-tier topology; remove dead_code annotations |
+| `lifecycle_manager/monitoring.rs` | `Arc::clone` pattern + import |
+| `lifecycle_manager/helpers.rs` | `Arc::clone` pattern + import |
+| `handlers/lifecycle/transitions.rs` | Remove redundant `.clone()` on owned value |
+| `lib.rs` | Remove `#![expect(clippy::redundant_clone)]` |
+| `Cargo.toml` (root) | Remove `ureq` from workspace deps |
+| `crates/biomeos-core/Cargo.toml` | Inline ureq version; remove duplicate serde_json |
+| `crates/biomeos-test-utils/Cargo.toml` | Scoped tokio features |
+| `tests/neural_api_routing_tests/discovery_registration.rs` | Fix stale assertion |
+| `CURRENT_STATUS.md` | Reflect wave 157k delivery |
+
+### Verification
+
+- `cargo check`: clean
+- `cargo clippy --workspace`: **0 warnings** (no crate-level suppressions needed)
+- `cargo test --workspace`: **8614 pass, 0 fail**
+- All 26 crate roots: `#![forbid(unsafe_code)]` verified
+- No production mocks, no hardcoded primal names, no tokio "full" in prod

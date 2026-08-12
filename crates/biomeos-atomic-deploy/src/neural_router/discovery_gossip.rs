@@ -8,6 +8,7 @@
 //! requested capability. Returns gate+primal info for targeted mesh routing.
 
 use biomeos_core::TransportEndpoint;
+use biomeos_types::primal_names::SWARMVINE;
 use serde_json::{Value, json};
 use tracing::{debug, trace};
 
@@ -68,7 +69,7 @@ impl NeuralRouter {
         capability: &str,
     ) -> Option<GossipCapabilityHint> {
         let family_id = biomeos_types::env_config::family_id().unwrap_or_default();
-        let swarmvine_socket = resolve_primal_socket("swarmvine", &family_id);
+        let swarmvine_socket = resolve_primal_socket(SWARMVINE, &family_id);
 
         if swarmvine_socket.is_empty() {
             trace!("swarmVine socket not resolved, skipping gossip lookup");

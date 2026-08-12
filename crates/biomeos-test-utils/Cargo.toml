@@ -9,7 +9,7 @@ description = "Shared test utilities, fixtures, and helpers for the biomeOS work
 
 [dependencies]
 # Core dependencies
-tokio = { workspace = true, features = ["full", "test-util"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync", "time", "net", "io-util", "fs", "process", "signal", "test-util"] }
 anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

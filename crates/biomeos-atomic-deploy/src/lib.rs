@@ -44,10 +44,6 @@
 )]
 #![expect(clippy::unused_self, reason = "trait method signatures")]
 #![expect(
-    clippy::redundant_clone,
-    reason = "Arc/clone patterns in concurrent coordinator code"
-)]
-#![expect(
     clippy::needless_pass_by_value,
     reason = "public API stability — callers pass owned types"
 )]
