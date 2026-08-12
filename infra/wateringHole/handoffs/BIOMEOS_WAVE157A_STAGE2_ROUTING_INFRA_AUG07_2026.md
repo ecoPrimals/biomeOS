@@ -763,3 +763,39 @@ Broad technical debt accumulated across the biomeOS crate:
 - `cargo test --workspace`: **8614 pass, 0 fail**
 - All 26 crate roots: `#![forbid(unsafe_code)]` verified
 - No production mocks, no hardcoded primal names, no tokio "full" in prod
+
+---
+
+## Addendum 18 — Wave 157k Blurb Acknowledgment
+
+**Date**: August 12, 2026
+**Blurb**: Wave 157k Post-Pandemic Evolution
+
+### Bug Status — biomeOS Items
+
+| # | Bug | Blurb Status | Actual Status | Notes |
+|---|-----|-------------|---------------|-------|
+| 4 | skunkBat spawn leak (256 forks/10h) | OPEN | **RESOLVED** (`6df4220e`, Aug 11) | Fix shipped before blurb. Rapid-restart detection carries resurrection count when crash <120s of last spawn. |
+
+**biomeOS posture**: 0/0/0 (all resolved).
+
+### Ecosystem Validation
+
+| Finding | Impact on biomeOS |
+|---------|-------------------|
+| graftGate FULL NUCLEUS via Neural API | **composition.orchestrate** validated: 12 primals, 1830 caps, 21 domains, <60s |
+| iosGate first deploy (6th OS) | biomeOS cross-arch confirmed (x86_64 + aarch64 + armv7 + darwin + iOS + Windows) |
+| songBird `content.locate` FUNCTIONAL | westGate CAS federation unblocked — biomeOS nest_atomic handler can route `content.exists` |
+| swarmVine P2s resolved | Gossip mesh fully bidirectional — composition.orchestrate gossip step now has live endpoints |
+| ironGate 594 gossip entries | biomeOS cross-gate discovery via `discovery_gossip.rs` has real data to route against |
+
+### Depot Refresh Advisory
+
+songBird (`5bc2d3988`) and swarmVine binaries have P2 fixes. eastGate should pull fresh depot when available.
+
+### No Action Required
+
+- P1 toadstool wgpu28 — strandGate ownership, not biomeOS
+- blueGate depot timeout — blueGate ownership
+- biomeGate SSH — eventual recovery
+- southGate LAN IP — sporeGate topology

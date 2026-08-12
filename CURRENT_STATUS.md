@@ -116,11 +116,14 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 
 ## Posture
 
-biomeOS is in **STAGE 2 NEURAL API ACTIVATION** (G67). G64+G65+G66 COMPLETE (cephalization trilogy). G22 COMPLETE. G72 Tier 1 CLEAN. 5-gate gossip mesh ACTIVE. Category shadow FIXED.
+biomeOS is in **STAGE 2 NEURAL API ACTIVATION** (G67). G64+G65+G66 COMPLETE (cephalization trilogy). G22 COMPLETE. G72 Tier 1 CLEAN. 5-gate gossip mesh ACTIVE. Category shadow FIXED. **FULL NUCLEUS PROVEN** on graftGate via `biomeos nucleus start --mode full` (12 primals, 1830 capabilities, <60s).
 
 **Wave 157k — POST-PANDEMIC EVOLUTION (Aug 12, 2026)**:
-- **P2 FIX: skunkBat spawn leak** — rapid-restart detection in resurrection path. `last_resurrection_at` timestamp prevents spawn storms by carrying forward cumulative resurrection count when a primal crashes within 120s of its last resurrection. Previously, each Degraded transition reset `resurrection_attempts: 0`, allowing infinite spawn loops (~256/10h).
+- **P2 #4 RESOLVED: skunkBat spawn leak** (`6df4220e`) — rapid-restart detection in resurrection path. `last_resurrection_at` carries forward cumulative count when crash occurs within 120s. Blurb shows OPEN but fix shipped Aug 11.
+- **Deep debt sweep** (`90aa3611`) — routing.rs split (882→682 LOC), topology 4-tier scoring wired, Arc::clone normalized, hardcoded primal names eliminated, redundant_clone suppression removed, dep hygiene.
+- **Doc cleanup** (`df14fe97`) — all root docs synced to v4.57/Aug 12, obsolete scripts removed, 55 GiB artifacts recovered.
 - **Pre-existing fix: `translations_with_prefix`** — missing method on `CapabilityTranslationRegistry` (used by nest_atomic handler) added.
+- **Blurb validation: graftGate FULL NUCLEUS** — biomeOS Neural API orchestrated 12 primals, 21 ACTIVE domains, 1830 capabilities in <60s. `composition.orchestrate` pipeline validated in production.
 
 **Wave 157i — POST-PANDEMIC CASCADE (Aug 11, 2026)**:
 - **Composition lifecycle (deploy→register→gossip→verify)**: `composition.orchestrate` now wires the full atomic lifecycle — post-deploy gossip advertisement via swarmVine + composition validation via primalSpring. Both steps are best-effort/graceful (no hard failure when swarmVine or primalSpring unavailable).
