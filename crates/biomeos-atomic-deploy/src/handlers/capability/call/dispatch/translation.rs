@@ -22,7 +22,7 @@ use crate::neural_router::{DiscoveredAtomic, DiscoveredPrimal};
 use anyhow::Result;
 use biomeos_core::TransportEndpoint;
 use std::sync::Arc;
-use tracing::{debug, trace};
+use tracing::{debug, info, trace};
 
 /// Trace label for dispatches routed through the mesh gateway.
 const MESH_PROVIDER_LABEL: &str = "mesh_relay";
@@ -105,14 +105,25 @@ impl CapabilityHandler {
 
         // Prefer the provider declared in the translation registry.
         // Without this, `providers[0]` (discovery order) wins and a
-        // domain like "storage" can route to ToadStool instead of
-        // NestGate when ToadStool also advertises storage capabilities.
+        // domain like "braid" can route to loamSpine instead of
+        // sweetGrass when loamSpine also advertises braid.commit.
+        //
+        // When the preferred provider is absent from discovery results,
+        // fall back to the translation's own TOML-resolved socket rather
+        // than using the wrong provider's endpoint (category shadow fix).
         let (endpoint, primary_name) = if let Some(preferred) = atomic
             .primals
             .iter()
             .find(|p| p.name.eq_ignore_ascii_case(&provider_from_trans))
         {
             (preferred.endpoint.clone(), preferred.name.to_string())
+        } else if let Some(trans_endpoint) = TransportEndpoint::parse(&trans.socket) {
+            info!(
+                "⚡ Shadow fix: preferred '{}' absent from discovery for '{}', \
+                 using translation socket: {} (ribocipher={})",
+                provider_from_trans, ctx.capability, trans_endpoint.display_string(), trans.ribocipher
+            );
+            (trans_endpoint, provider_from_trans.clone())
         } else {
             (
                 atomic.primary_endpoint.clone(),
@@ -123,6 +134,11 @@ impl CapabilityHandler {
                     .unwrap_or_else(|| provider_from_trans.clone()),
             )
         };
+
+        info!(
+            "📡 Dispatch: {} → {} (ribocipher={}, endpoint={})",
+            semantic_name, forward_method, trans.ribocipher, endpoint.display_string()
+        );
 
         let result = if trans.ribocipher {
             self.router

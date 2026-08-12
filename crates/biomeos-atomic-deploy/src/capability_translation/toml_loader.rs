@@ -255,4 +255,93 @@ mod tests {
 
         assert!(result.is_none());
     }
+
+    #[test]
+    fn domain_ribocipher_inherits_to_translations() {
+        let toml_content = r#"
+[domains.attribution]
+provider = "sweetgrass"
+ribocipher = true
+capabilities = ["attribution", "braid", "provenance"]
+
+[translations.attribution]
+"braid.verify" = { provider = "sweetgrass", method = "braid.verify" }
+"braid.list" = { provider = "sweetgrass", method = "braid.list" }
+"braid.create" = { provider = "sweetgrass", method = "braid.create" }
+
+[translations.storage]
+"content.exists" = { provider = "nestgate", method = "content.exists" }
+"#;
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(toml_content.as_bytes()).unwrap();
+
+        let mut registry = CapabilityTranslationRegistry::new();
+        let result = load_from_registry_toml(&mut registry, file.path(), "test-family");
+
+        assert_eq!(result, Some(4));
+
+        let braid_verify = registry.get_translation("braid.verify").unwrap();
+        assert!(
+            braid_verify.ribocipher,
+            "braid.verify must inherit ribocipher=true from [domains.attribution]"
+        );
+
+        let braid_list = registry.get_translation("braid.list").unwrap();
+        assert!(
+            braid_list.ribocipher,
+            "braid.list must inherit ribocipher=true from [domains.attribution]"
+        );
+
+        let braid_create = registry.get_translation("braid.create").unwrap();
+        assert!(
+            braid_create.ribocipher,
+            "braid.create must inherit ribocipher=true from [domains.attribution]"
+        );
+
+        let content_exists = registry.get_translation("content.exists").unwrap();
+        assert!(
+            !content_exists.ribocipher,
+            "content.exists should NOT have ribocipher (storage domain has no flag)"
+        );
+    }
+
+    #[test]
+    fn load_from_config_respects_domain_ribocipher() {
+        let toml_content = r#"
+[domains.attribution]
+provider = "sweetgrass"
+ribocipher = true
+
+[translations.attribution]
+"braid.verify" = { provider = "sweetgrass", method = "braid.verify" }
+
+[translations.storage]
+"content.put" = { provider = "nestgate", method = "content.put" }
+"#;
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(toml_content.as_bytes()).unwrap();
+
+        let mut registry = CapabilityTranslationRegistry::new();
+        let count = registry
+            .load_from_config_for_family(
+                file.path(),
+                |provider, _family| format!("/tmp/test-{}.sock", provider),
+                Some("test-family"),
+            )
+            .unwrap();
+
+        assert_eq!(count, 2);
+
+        let braid_verify = registry.get_translation("braid.verify").unwrap();
+        assert!(
+            braid_verify.ribocipher,
+            "load_from_config_for_family must inherit domain ribocipher flag"
+        );
+
+        let content_put = registry.get_translation("content.put").unwrap();
+        assert!(
+            !content_put.ribocipher,
+            "storage domain should not have ribocipher"
+        );
+    }
 }

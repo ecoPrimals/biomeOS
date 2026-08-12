@@ -259,6 +259,17 @@ impl NeuralApiServer {
             Route::CompositionHealth => {
                 dispatch(self.lifecycle_handler.composition_health(params).await, id)
             }
+            Route::NestHealth => {
+                dispatch(self.lifecycle_handler.nest_atomic_health().await, id)
+            }
+            Route::NestCapabilities => {
+                dispatch(
+                    self.lifecycle_handler
+                        .nest_atomic_capabilities(&self.translation_registry)
+                        .await,
+                    id,
+                )
+            }
             // Protocol
             Route::ProtocolStatus => dispatch(self.protocol_handler.status().await, id),
             Route::ProtocolEscalate => dispatch(self.protocol_handler.escalate(params).await, id),

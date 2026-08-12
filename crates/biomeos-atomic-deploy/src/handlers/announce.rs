@@ -165,6 +165,8 @@ pub async fn handle_announce(
     }
 
     // 3. Method + translation registration
+    //    Preserve ribocipher flags: if a domain requires ribocipher (set from
+    //    capability_registry.toml), announce-registered translations inherit it.
     let mut methods_registered = 0;
     {
         let mut registry = translation_registry.write().await;
@@ -183,12 +185,14 @@ pub async fn handle_announce(
                         .await;
                 }
 
-                registry.register_translation(
+                let use_ribocipher = registry.domain_requires_ribocipher(domain);
+                registry.register_translation_full(
                     method,
                     &announcement.primal,
                     method,
                     &announcement.socket,
                     None,
+                    use_ribocipher,
                 );
                 methods_registered += 1;
             }
@@ -199,12 +203,17 @@ pub async fn handle_announce(
             if let Some(map) = mappings.as_object() {
                 for (semantic, actual) in map {
                     if let Some(actual_str) = actual.as_str() {
-                        registry.register_translation(
+                        let use_ribocipher = semantic
+                            .split_once('.')
+                            .map(|(domain, _)| registry.domain_requires_ribocipher(domain))
+                            .unwrap_or(false);
+                        registry.register_translation_full(
                             semantic,
                             &announcement.primal,
                             actual_str,
                             &announcement.socket,
                             None,
+                            use_ribocipher,
                         );
                         methods_registered += 1;
                     }

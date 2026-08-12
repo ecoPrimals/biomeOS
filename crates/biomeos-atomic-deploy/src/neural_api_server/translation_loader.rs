@@ -181,14 +181,19 @@ impl NeuralApiServer {
                     let socket_path =
                         crate::capability_translation::resolve_primal_socket(primal, family_id);
 
-                    // Register all translations for this primal
+                    // Register all translations for this primal.
+                    // Preserve ribocipher flags from domain-level config.
                     for (semantic, actual) in caps_provided {
-                        // Check if there are parameter mappings for this capability
                         let param_mappings = node
                             .parameter_mappings
                             .as_ref()
                             .and_then(|mappings| mappings.get(semantic))
                             .cloned();
+
+                        let use_ribocipher = semantic
+                            .split_once('.')
+                            .map(|(domain, _)| registry.domain_requires_ribocipher(domain))
+                            .unwrap_or(false);
 
                         info!(
                             "📝 Loading translation from graph: {} → {} ({} @ {}) {}",
@@ -203,12 +208,13 @@ impl NeuralApiServer {
                             }
                         );
 
-                        registry.register_translation(
+                        registry.register_translation_full(
                             semantic,
                             primal.as_str(),
                             actual,
                             &socket_path,
                             param_mappings,
+                            use_ribocipher,
                         );
 
                         loaded_count += 1;

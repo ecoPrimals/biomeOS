@@ -70,6 +70,7 @@ pub mod lifecycle;
 #[cfg(test)]
 mod lifecycle_tests;
 pub mod manifest;
+mod nest_atomic;
 pub mod niche;
 pub mod protocol;
 #[cfg(test)]
