@@ -1,7 +1,7 @@
 # biomeOS Scripts
 
 **Status**: Most scripts are deprecated — deployment is via `biomeos nucleus start` (Pure Rust)  
-**Updated**: August 10, 2026
+**Updated**: August 12, 2026
 
 ---
 
@@ -13,26 +13,18 @@
 | `create_sibling_spore.sh` | Create sibling spore with genetic lineage | Active |
 | `test_provenance_trio_e2e.sh` | E2E test for provenance trio (rhizoCrypt, LoamSpine, sweetGrass) | Active |
 
-## Development-Only Scripts
-
-| Script | Purpose | Status |
-|--------|---------|--------|
-| `build_primals_for_testing.sh` | Build primal binaries from source repos → `plasmidBin/primals/` | **Dev-only** |
-| `neural-api-test.sh` | Manual Neural API activation test (Wave 157a Stage 2) | **Dev-only** — superseded by `cargo test --workspace` (2691+ tests) |
-
-> **Note**: `build_primals_for_testing.sh` is for local development only. For production,
-> use `tools/harvest` (canonical) or LiveSpore USB. See `plasmidBin/MANIFEST.md`.
-
 ## Deprecated (Internalized to Rust)
 
 | Former Script | Replacement |
 |----------------|-------------|
-| `start_nucleus.sh` | `biomeos nucleus start` (shell script removed from tree) |
-| `build-genome.sh` | `biomeos genome build` (shell script removed from tree) |
+| `start_nucleus.sh` | `biomeos nucleus start` |
+| `build-genome.sh` | `biomeos genome build` |
+| `build_primals_for_testing.sh` | `tools/harvest` (biomeos-harvest binary) |
+| `neural-api-test.sh` | `cargo test --workspace` (8,614+ tests) |
 | `stop_ecosystem.sh` | `biomeos nucleus stop` / `LifecycleManager::shutdown_all()` |
 | `deploy-*-lineage.sh` | Neural API graph-based deployment (`graphs/*.toml`) |
-| `harvest-primals.sh` | `tools/harvest` (biomeos-harvest binary) — `cd tools/harvest && cargo run` |
-| `validate_*.sh` | `cargo test --workspace` (8,578+ tests) |
+| `harvest-primals.sh` | `tools/harvest` (biomeos-harvest binary) |
+| `validate_*.sh` | `cargo test --workspace` |
 
 The Rust replacement (`biomeos nucleus start`) provides:
 - Binary discovery: `plasmidBin/` (canonical), `livespore-usb/`, `target/release/` (dev fallback), `$PATH`

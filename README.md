@@ -12,7 +12,7 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP; HTTP removed v3.97) + tarpc binary escalation (wired) + DashMap connection pool on neural router hot path |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, Edition 2024, rust-version 1.87, all 26 workspace crates, modern idiomatic, fully concurrent, deep debt resolved, zero-copy evolved, all monoliths split into semantic modules, primalSpring-aligned, `#[expect]` throughout, all files <800 LOC, async-trait eliminated, dashmap 6, toml 0.9, axum 0.8, capability-based composition, UDS dual-protocol auto-detect, zero `Box<dyn Error>`, zero clippy warnings, workspace-level `unwrap_used = "deny"`, connection pool on hot dispatch path) |
-| Tests | 8,700+ workspace-wide, 0 regressions, fully concurrent — 88.37% line / 89.58% function (llvm-cov). Deep debt audit CLEAN: zero unsafe, zero TODOs, zero mocks, zero panic in prod |
+| Tests | 8,614+ workspace-wide, 0 regressions, fully concurrent — 88%+ line / function (llvm-cov). Deep debt audit CLEAN: zero unsafe, zero TODOs, zero mocks, zero panic in prod |
 | Unsafe Code | 0 in production (workspace `deny`, `#[forbid(unsafe_code)]` on all crate roots + all 20+ binary entry points) |
 | C Dependencies | 0 (blake3 `default-features = false` + `pure`, deny.toml 16-crate ban list enforced) |
 | Clippy | pedantic+nursery enabled, workspace lint inheritance, `-D warnings`, zero errors including `--tests` (verified Jul 31 2026) |
@@ -48,10 +48,10 @@ biomeOS uses a **unified version scheme** (synced since v4.54):
 
 | Scheme | Value | Where | Purpose |
 |--------|-------|-------|---------|
-| **Release train** | `v4.56` | README, CHANGELOG, git tags | Tracks evolution waves visible to downstream consumers. |
-| **Workspace semver** | `4.56.0` | `Cargo.toml` `[workspace.package]` | Rust crate version. Synced with release train since v4.54. |
+| **Release train** | `v4.57` | README, CHANGELOG, git tags | Tracks evolution waves visible to downstream consumers. |
+| **Workspace semver** | `4.57.0` | `Cargo.toml` `[workspace.package]` | Rust crate version. Synced with release train since v4.54. |
 
-The version (`v4.56` / `4.56.0`) is the **canonical version** for downstream consumers (springs, gardens, projectNUCLEUS).
+The version (`v4.57` / `4.57.0`) is the **canonical version** for downstream consumers (springs, gardens, projectNUCLEUS).
 
 biomeOS is the only primal with `is_orchestrator = true` in its manifest.
 
@@ -369,9 +369,9 @@ scyBorg triple-copyleft: **AGPL-3.0-or-later** (code) + **ORC** (operational) + 
 
 ---
 
-**Status**: Production Ready (v4.56)
-**Updated**: August 3, 2026
-**Tests**: 8,578+ workspace-wide (0 regressions), 88%+ line / function (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings (incl tests) | **Dead deps**: 0 | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **Deprecated**: 0 | **Blocking debt**: 0
+**Status**: Production Ready (v4.57)
+**Updated**: August 12, 2026
+**Tests**: 8,614+ workspace-wide (0 regressions), 88%+ line / function (llvm-cov) | **Clippy**: pedantic+nursery, 0 warnings (incl tests) | **Dead deps**: 0 | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0 | **Unsafe**: 0 (all 26 crates `#![forbid(unsafe_code)]`) | **Deprecated**: 0 | **Blocking debt**: 0
 **Architecture**: JSON-RPC primary + tarpc binary escalation | Multi-transport IPC (Unix/abstract/TCP; HTTP removed v3.97) | L4 weighted routing + L5 perceptron shadow | Capability-first discovery (runtime DashMap + bootstrap fallback) + `capability.call` + mesh cross-gate relay | `--bind-mode` guideStone startup | HEALTH-01 compliant | Real metrics via biomeos-system | Lineage fail-closed | Agnostic naming | Adaptive routing weights (redb-persistent) | Stale registration pruning | Partition-aware routing | Membrane + nucleated composition | XDG-compliant paths | Cross-arch (x86_64 + aarch64 + armv7 + Windows-gnu) | scyBorg (AGPL-3.0-or-later + ORC + CC-BY-SA 4.0)
 
 ---

@@ -23,7 +23,7 @@
 | Formatting | PASS (rustfmt clean) |
 | Cross-arch | x86_64-unknown-linux-musl + x86_64-pc-windows-gnu + aarch64 (partial) |
 | Workspace crates | 26 |
-| Signal graphs | 65 |
+| Signal graphs | 31 (+ 47 deploy graphs = 78 total) |
 | Capability domains | 27 (320+ translations) |
 | Mocks in prod | 0 (all test-only) |
 | panic! in prod | 0 |

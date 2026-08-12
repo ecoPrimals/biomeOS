@@ -1,7 +1,7 @@
 +++
 title = "biomeOS Validation Summary"
-description = "Orchestration kernel v4.57 — G65 protocol negotiation SHIPPED, G64 C2 dual-socket, G22 complete, 30 signal graphs, 27 domains, 320+ translations, zero blocking debt"
-date = 2026-08-06
+description = "Orchestration kernel v4.57 — deep debt CLEAN, composition lifecycle wired, G65+G64+G22 complete, 78 graphs, 27 domains, 320+ translations, zero blocking debt"
+date = 2026-08-12
 
 [taxonomies]
 primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef", "barracuda", "nestgate", "rhizocrypt", "loamspine", "sweetgrass", "squirrel", "petaltongue"]
@@ -9,15 +9,17 @@ primals = ["biomeos", "beardog", "songbird", "skunkbat", "toadstool", "coralreef
 
 ## Status
 
-- **8,588+ tests** workspace-wide, 0 failures, fully concurrent
+- **8,614+ tests** workspace-wide, 0 failures, fully concurrent
 - **88%+ coverage** line / region / function (llvm-cov workspace-wide)
-- **v4.57** — Wave 156m: G65 protocol negotiation SHIPPED (single-socket, 10 tests)
-- **v4.57** — Wave 156l: G64 C2 dual-socket SHIPPED, `tcp_only` deprecated, `Arc<str>` hot paths, 3 flaky tests fixed
-- **v4.57** — Wave 156d: Cell attach CLI (`biomeos nucleus attach`), ironGate ops gap CLOSED
+- **v4.57** — Wave 157k: Deep debt sweep (routing split, topology 4-tier, Arc::clone, hardcoding eliminated)
+- **v4.57** — Wave 157k: P2 skunkBat spawn leak FIXED (rapid-restart detection)
+- **v4.57** — Wave 157i: Composition lifecycle (deploy→gossip→verify), category shadow fix
+- **v4.57** — Wave 156m: G65 protocol negotiation SHIPPED (single-socket)
+- **v4.57** — Wave 156l: G64 C2 dual-socket, `tcp_only` deprecated
+- **v4.57** — Wave 156d: Cell attach CLI (`biomeos nucleus attach`)
 - **v4.56** — Wave 155n/156b: G22 COMPLETE, cell deploy graphs, data federation signals
-- **v4.55** — Wave 155n: Coevolution contract (composition.test_swap), mode gap fix
+- **v4.55** — Wave 155n: Coevolution contract (composition.test_swap)
 - **v4.54** — Wave 155m: P1 fixes (respawn storm, socket deletion), P3 sweep
-- **v4.49** — Wave 155k: P2 divergence fixes — capability wipe cycle, test extraction, dep narrowing
 - **v4.48** — Wave 155j: Composition lifecycle — cellMembrane boot_order integration
 - **v4.47** — Wave 155i: Deep debt cleanup — dead deps, test extraction, capability-based BTSP
 - **v4.46** — Wave 155i: NUCLEUS Orchestrator — riboCipher executor, socket unification, persistence
