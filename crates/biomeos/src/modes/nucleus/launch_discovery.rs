@@ -269,7 +269,7 @@ mod tests {
             file,
             r#"
 [compositions.tower]
-primals = ["bearDog", "songBird", "skunkBat"]
+primals = ["bearDog", "songBird", "skunkBat", "swarmVine"]
 
 [compositions.compute]
 primals = ["toadStool", "barraCuda", "coralReef", "biomeOS"]
@@ -278,7 +278,7 @@ primals = ["toadStool", "barraCuda", "coralReef", "biomeOS"]
 primals = ["nestGate", "rhizoCrypt", "loamSpine", "sweetGrass"]
 
 [compositions.full]
-primals = ["bearDog", "songBird", "skunkBat", "toadStool", "barraCuda", "coralReef", "nestGate", "rhizoCrypt", "loamSpine", "sweetGrass", "squirrel", "petalTongue", "biomeOS"]
+primals = ["bearDog", "songBird", "skunkBat", "swarmVine", "toadStool", "barraCuda", "coralReef", "nestGate", "rhizoCrypt", "loamSpine", "sweetGrass", "squirrel", "petalTongue", "biomeOS"]
 {extra}
 "#
         )
@@ -293,6 +293,7 @@ primals = ["bearDog", "songBird", "skunkBat", "toadStool", "barraCuda", "coralRe
             "beardog".to_string(),
             "songbird".to_string(),
             "skunkbat".to_string(),
+            "swarmvine".to_string(),
             "nestgate".to_string(),
             "rhizocrypt".to_string(),
             "loamspine".to_string(),
@@ -315,9 +316,9 @@ primals = ["bearDog", "songBird", "skunkBat", "toadStool", "barraCuda", "coralRe
         let bootstrap = NucleusMode::Tower.bootstrap_launch_order();
         let discovered =
             discover_primals_from_manifest(NucleusMode::Tower, &path).expect("discover");
-        assert_eq!(discovered.len(), 3);
+        assert_eq!(discovered.len(), 4);
         let merged = merge_discovered_with_bootstrap(&bootstrap, discovered);
-        assert_eq!(merged, vec!["beardog", "songbird", "skunkbat"]);
+        assert_eq!(merged, vec!["beardog", "songbird", "skunkbat", "swarmvine"]);
     }
 
     #[test]
@@ -334,6 +335,7 @@ primals = ["bearDog", "songBird", "skunkBat", "toadStool", "barraCuda", "coralRe
                 "beardog",
                 "songbird",
                 "skunkbat",
+                "swarmvine",
                 "toadstool",
                 "coralreef",
                 "barracuda"
@@ -353,15 +355,15 @@ primals = ["bearDog", "songBird", "skunkBat", "toadStool", "barraCuda", "coralRe
             dir.path(),
             r#"
 [boot_order]
-sequence = ["bearDog", "songBird", "skunkBat", "nestGate", "rhizoCrypt", "loamSpine", "sweetGrass", "toadStool", "coralReef", "barraCuda", "squirrel", "petalTongue"]
+sequence = ["bearDog", "songBird", "skunkBat", "swarmVine", "nestGate", "rhizoCrypt", "loamSpine", "sweetGrass", "toadStool", "coralReef", "barraCuda", "squirrel", "petalTongue"]
 strategy = "sequential"
 "#,
         );
 
         let boot_order = extract_boot_order(&path).expect("boot_order present");
-        assert_eq!(boot_order.len(), 12);
+        assert_eq!(boot_order.len(), 13);
         assert_eq!(boot_order[0], "beardog");
-        assert_eq!(boot_order[3], "nestgate");
+        assert_eq!(boot_order[3], "swarmvine");
     }
 
     #[test]
@@ -370,12 +372,13 @@ strategy = "sequential"
             "beardog".to_string(),
             "songbird".to_string(),
             "skunkbat".to_string(),
+            "swarmvine".to_string(),
             "nestgate".to_string(),
             "toadstool".to_string(),
         ];
         let bootstrap = NucleusMode::Tower.bootstrap_launch_order();
         let result = filter_boot_order_for_mode(NucleusMode::Tower, &boot_order, &bootstrap);
-        assert_eq!(result, vec!["beardog", "songbird", "skunkbat"]);
+        assert_eq!(result, vec!["beardog", "songbird", "skunkbat", "swarmvine"]);
     }
 
     #[test]
@@ -384,6 +387,7 @@ strategy = "sequential"
             "beardog".to_string(),
             "songbird".to_string(),
             "skunkbat".to_string(),
+            "swarmvine".to_string(),
             "nestgate".to_string(),
             "toadstool".to_string(),
             "coralreef".to_string(),
@@ -397,6 +401,7 @@ strategy = "sequential"
                 "beardog",
                 "songbird",
                 "skunkbat",
+                "swarmvine",
                 "toadstool",
                 "coralreef",
                 "barracuda"
@@ -425,7 +430,7 @@ strategy = "sequential"
         let boot_order = vec!["beardog".to_string(), "songbird".to_string()];
         let bootstrap = NucleusMode::Tower.bootstrap_launch_order();
         let result = filter_boot_order_for_mode(NucleusMode::Tower, &boot_order, &bootstrap);
-        assert_eq!(result, vec!["beardog", "songbird", "skunkbat"]);
+        assert_eq!(result, vec!["beardog", "songbird", "skunkbat", "swarmvine"]);
     }
 
     #[test]

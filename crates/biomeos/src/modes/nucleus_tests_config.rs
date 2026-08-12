@@ -62,7 +62,7 @@ fn test_nucleus_mode_from_str_invalid() {
 fn test_nucleus_mode_primals() {
     assert_eq!(
         NucleusMode::Tower.primals(),
-        vec!["beardog", "songbird", "skunkbat"],
+        vec!["beardog", "songbird", "skunkbat", "swarmvine"],
         "Tower mode primals"
     );
     assert_eq!(
@@ -71,6 +71,7 @@ fn test_nucleus_mode_primals() {
             "beardog",
             "songbird",
             "skunkbat",
+            "swarmvine",
             "toadstool",
             "coralreef",
             "barracuda"
@@ -83,6 +84,7 @@ fn test_nucleus_mode_primals() {
             "beardog",
             "songbird",
             "skunkbat",
+            "swarmvine",
             "nestgate",
             "rhizocrypt",
             "loamspine",
@@ -93,16 +95,17 @@ fn test_nucleus_mode_primals() {
     );
     assert_eq!(
         NucleusMode::Core.primals(),
-        vec!["beardog", "songbird", "nestgate", "toadstool", "squirrel"],
+        vec!["beardog", "songbird", "swarmvine", "nestgate", "toadstool", "squirrel"],
         "Core mode primals (legacy 5-primal compat)"
     );
     assert_eq!(
         NucleusMode::Full.primals().len(),
-        12,
-        "Full mode should launch 12 primals (all ecosystem primals except biomeOS itself)"
+        13,
+        "Full mode should launch 13 primals (all ecosystem primals except biomeOS itself)"
     );
     let full = NucleusMode::Full.primals();
     assert_eq!(full[0], "beardog", "beardog starts first (security root)");
+    assert!(full.contains(&"swarmvine"), "Full includes swarmVine");
     assert!(full.contains(&"petaltongue"), "Full includes petalTongue");
     assert!(full.contains(&"sweetgrass"), "Full includes sweetGrass");
 }

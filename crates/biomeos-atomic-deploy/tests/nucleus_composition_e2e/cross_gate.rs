@@ -11,6 +11,7 @@ use crate::graphs_dir;
 const GATE2_NODE_IDS: &[&str] = &[
     "gate2_beardog",
     "gate2_songbird",
+    "gate2_swarmvine",
     "gate2_mesh_init",
     "gate2_discover_tower",
     "gate2_nestgate",

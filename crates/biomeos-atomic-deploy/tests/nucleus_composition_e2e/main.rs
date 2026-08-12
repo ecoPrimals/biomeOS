@@ -26,6 +26,7 @@ use std::path::PathBuf;
 pub(crate) const NUCLEUS_NODE_IDS: &[&str] = &[
     "tower_beardog",
     "tower_songbird",
+    "tower_swarmvine",
     "init_sovereign_onion",
     "init_beacon_mesh",
     "tower_validate",

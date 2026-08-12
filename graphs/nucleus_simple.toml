@@ -59,10 +59,35 @@ RUST_LOG = "songbird=info"
 [nodes.constraints]
 timeout_ms = 30000
 
-# 3: Toadstool (Compute)
+# 3: swarmVine (Gossip Mesh)
+[[nodes]]
+id = "swarmvine"
+depends_on = ["songbird"]
+output = "swarmvine_ready"
+capabilities = ["gossip", "cascade"]
+
+[nodes.primal]
+by_capability = "gossip"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/membrane/songbird-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
+RUST_LOG = "swarmvine=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# 4: Toadstool (Compute)
 [[nodes]]
 id = "toadstool"
-depends_on = ["songbird"]
+depends_on = ["swarmvine"]
 output = "toadstool_ready"
 capabilities = ["compute"]
 
@@ -83,10 +108,10 @@ RUST_LOG = "toadstool=info"
 [nodes.constraints]
 timeout_ms = 45000
 
-# 4: NestGate (Storage)
+# 5: NestGate (Storage)
 [[nodes]]
 id = "nestgate"
-depends_on = ["songbird"]
+depends_on = ["swarmvine"]
 output = "nestgate_ready"
 capabilities = ["storage"]
 
@@ -107,10 +132,10 @@ RUST_LOG = "nestgate=info"
 [nodes.constraints]
 timeout_ms = 60000
 
-# 5: Squirrel (AI)
+# 6: Squirrel (AI)
 [[nodes]]
 id = "squirrel"
-depends_on = ["songbird"]
+depends_on = ["swarmvine"]
 output = "squirrel_ready"
 capabilities = ["ai"]
 
@@ -131,7 +156,7 @@ RUST_LOG = "squirrel=info"
 [nodes.constraints]
 timeout_ms = 30000
 
-# 6: Validate
+# 7: Validate
 [[nodes]]
 id = "validate"
 depends_on = ["toadstool", "nestgate", "squirrel"]
@@ -143,6 +168,7 @@ name = "health_check"
 [nodes.operation.params]
 check_beardog = true
 check_songbird = true
+check_swarmvine = true
 check_toadstool = true
 check_nestgate = true
 check_squirrel = true

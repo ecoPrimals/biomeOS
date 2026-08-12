@@ -270,6 +270,44 @@ timeout_ms = 30000  # 30s to start
 "onion.status" = "onion.status"
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# GOSSIP MESH (swarmVine — cross-gate discovery + cascade notifications)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "germinate_swarmvine"
+depends_on = ["germinate_songbird"]
+output = "swarmvine_genesis"
+capabilities = ["gossip", "cascade"]
+
+[nodes.primal]
+by_capability = "gossip"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/membrane/neural-api-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/membrane/songbird-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
+RUST_LOG = "swarmvine=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"gossip.advertise" = "gossip.advertise"
+"gossip.subscribe" = "gossip.subscribe"
+"gossip.relay" = "gossip.relay"
+"gossip.peers" = "gossip.peers"
+"gossip.entries" = "gossip.entries"
+"cascade.notify" = "cascade.notify"
+"endpoint.alive" = "endpoint.alive"
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # OPTIONAL ECOSYSTEM PRIMALS (Registered at runtime when started)
 # ═══════════════════════════════════════════════════════════════════════════════
 

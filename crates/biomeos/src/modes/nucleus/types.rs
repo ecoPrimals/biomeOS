@@ -8,7 +8,7 @@ use biomeos_types::{
     SystemPaths,
     primal_names::{
         BARRACUDA, BEARDOG, CORALREEF, LOAMSPINE, NESTGATE, PETALTONGUE, RHIZOCRYPT, SKUNKBAT,
-        SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL,
+        SONGBIRD, SQUIRREL, SWARMVINE, SWEETGRASS, TOADSTOOL,
     },
 };
 use serde::Deserialize;
@@ -66,16 +66,17 @@ impl NucleusMode {
     /// compute (toadstool, coralreef, barracuda) → storage/provenance → AI → UI.
     pub(crate) fn bootstrap_launch_order(self) -> Vec<&'static str> {
         match self {
-            NucleusMode::Tower => vec![BEARDOG, SONGBIRD, SKUNKBAT],
-            NucleusMode::Node => vec![BEARDOG, SONGBIRD, SKUNKBAT, TOADSTOOL, CORALREEF, BARRACUDA],
+            NucleusMode::Tower => vec![BEARDOG, SONGBIRD, SKUNKBAT, SWARMVINE],
+            NucleusMode::Node => vec![BEARDOG, SONGBIRD, SKUNKBAT, SWARMVINE, TOADSTOOL, CORALREEF, BARRACUDA],
             NucleusMode::Nest => vec![
-                BEARDOG, SONGBIRD, SKUNKBAT, NESTGATE, RHIZOCRYPT, LOAMSPINE, SWEETGRASS, SQUIRREL,
+                BEARDOG, SONGBIRD, SKUNKBAT, SWARMVINE, NESTGATE, RHIZOCRYPT, LOAMSPINE, SWEETGRASS, SQUIRREL,
             ],
-            NucleusMode::Core => vec![BEARDOG, SONGBIRD, NESTGATE, TOADSTOOL, SQUIRREL],
+            NucleusMode::Core => vec![BEARDOG, SONGBIRD, SWARMVINE, NESTGATE, TOADSTOOL, SQUIRREL],
             NucleusMode::Full => vec![
                 BEARDOG,
                 SONGBIRD,
                 SKUNKBAT,
+                SWARMVINE,
                 TOADSTOOL,
                 CORALREEF,
                 BARRACUDA,

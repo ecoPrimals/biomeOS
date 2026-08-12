@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
 **Updated**: August 12, 2026
-**Version**: v4.57 (Wave 157k — Deep Debt Sweep, Routing Refactor, Topology Wiring)
-**Posture**: EXEMPLAR. 5-gate gossip mesh LIVE. G72 Tier 1 COMPLETE (11/11, ~155+ crates fleet-wide). Deep debt sweep COMPLETE: routing.rs split (882→682 LOC), topology 4-tier scoring WIRED, Arc::clone normalized, hardcoded primal names eliminated, redundant_clone suppression REMOVED, dep hygiene (tokio scoping, ureq narrowed, dedup serde_json). biomeOS is the lean reference pattern — 0 P0, 0 P1, 0 P2.
+**Version**: v4.58 (Wave 157k — D11 CLOSED: swarmVine in NUCLEUS graph)
+**Posture**: EXEMPLAR. 5-gate gossip mesh LIVE. D11 RESOLVED: swarmVine now in all NUCLEUS deploy graphs + bootstrap_launch_order. All 10 active gates responded. biomeOS is the lean reference pattern — 0 P0, 0 P1, 0 P2.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---

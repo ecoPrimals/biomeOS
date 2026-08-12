@@ -799,3 +799,50 @@ songBird (`5bc2d3988`) and swarmVine binaries have P2 fixes. eastGate should pul
 - blueGate depot timeout — blueGate ownership
 - biomeGate SSH — eventual recovery
 - southGate LAN IP — sporeGate topology
+
+---
+
+## Addendum 19 — D11 RESOLVED: swarmVine in NUCLEUS Graph
+
+**Date**: August 12, 2026 17:45
+**Commit**: (this commit)
+**Blocker**: #8 — `graftGate D11: swarmVine not in biomeOS NUCLEUS graph`
+**Status**: **CLOSED**
+
+### Root Cause
+
+swarmVine (gossip mesh) was never included in any of biomeOS's deploy graphs or
+the `bootstrap_launch_order()` in `NucleusMode`. This means `biomeos nucleus start`
+in any mode would not start swarmVine, leaving cross-gate gossip capabilities
+unavailable until manually started.
+
+### Resolution
+
+1. **`NucleusMode::bootstrap_launch_order()`** — added SWARMVINE to all modes:
+   - Tower: `[beardog, songbird, skunkbat, swarmvine]`
+   - Node: `[beardog, songbird, skunkbat, swarmvine, toadstool, coralreef, barracuda]`
+   - Nest: `[beardog, songbird, skunkbat, swarmvine, nestgate, rhizocrypt, loamspine, sweetgrass, squirrel]`
+   - Core: `[beardog, songbird, swarmvine, nestgate, toadstool, squirrel]`
+   - Full: all 13 primals (was 12)
+
+2. **Deploy graphs updated**:
+   - `nucleus_complete.toml` — new `tower_swarmvine` node after songbird, before onion init
+   - `nucleus_simple.toml` — new `swarmvine` node in position 3
+   - `gate2_nucleus.toml` — new `gate2_swarmvine` node with gossip capabilities
+   - `tower_atomic_bootstrap.toml` — new `germinate_swarmvine` node
+
+3. **Capabilities registered**: `gossip.advertise`, `gossip.subscribe`, `gossip.relay`,
+   `gossip.peers`, `gossip.entries`, `cascade.notify`, `endpoint.alive`
+
+### Validation
+
+- All 8,600+ workspace tests pass (0 failures)
+- NUCLEUS e2e topology sort validates 14-node graph (was 13)
+- gate2 cross-gate graph validates 10-node graph (was 9)
+- Phase ordering respects architecture: beardog → songbird → swarmvine → tower_validate
+
+### Impact
+
+All gates running `biomeos nucleus start --mode full` will now auto-start swarmVine,
+enabling cross-gate gossip propagation without manual intervention. This is critical
+for cascade notifications and capability advertisement to reach all gates.
