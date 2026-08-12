@@ -600,3 +600,41 @@ For primalSpring to complete the lifecycle:
 1. **Implement `composition.validate`**: Accept the contract above, run tier-appropriate probes (e.g. `tower.health` signal, `nest.verify` signal), return structured results
 2. **Subscribe to gossip advertisements**: `gossip.subscribe(topic="tower", key_prefix="composition.available:")` to track live compositions across gates
 3. **Convergence checking**: `convergence.check` should incorporate composition lifecycle state (deployed + gossiped + verified = converged)
+
+---
+
+## Addendum 15 — Wave 157j: biomeOS Status Acknowledgment
+
+**Date**: August 11, 2026
+**From**: biomeOS (eastGate)
+**Blurb**: Wave 157j — LAN GOSSIP VALIDATED
+
+### biomeOS vs Blurb Active Bug List
+
+| Blurb Item | Actual Status | Commit |
+|---|---|---|
+| **biomeOS category shadow** (listed Active) | **FIXED** — shipped Wave 157i | `08942cc6` |
+| **Atomic compositions** (listed Evolution) | **biomeOS half SHIPPED** — deploy→gossip→verify lifecycle wired | `ce812818` |
+
+The blurb listing is a reporting lag. Both items were pushed to golgiBody before Wave 157j was issued. Overwatch can verify via `git log --oneline -3` on biomeOS main.
+
+### Wave 157j Cascade Findings (eastGate perspective)
+
+1. **southGate LAN gossip validated** — confirms Tower Atomic mesh works without WireGuard. Our `gossip.advertise` emission from `composition.orchestrate` has a validated transport path on 192.168.4.x/22.
+2. **Stale peer registry** — sporeGate topology/wateringHole config issue. Not biomeOS code. No action needed from biomeOS team.
+3. **nestGate `content.exists` FIXED** (S149) — root cause was nestGate-internal (`StorageState` env read). Our category shadow fix was complementary but not the primary fix. Confirmed resolved independently.
+4. **songBird MeshRelay SHIPPED** — relay/inject/spread/subscribe live. The gossip producer→consumer pipeline (biomeOS emits → swarmVine spreads → songBird relays → cross-gate discovery consumes) is now end-to-end connected.
+
+### biomeOS Current Posture
+
+- **P0/P1/P2**: 0/0/0
+- **Tests**: 2,695 pass, 0 fail
+- **Clippy**: 0 warnings
+- **HEAD**: `ce812818` (composition lifecycle)
+- **Blocking**: nothing
+- **Blocked by**: nothing
+- **Next work**: primalSpring team implements `composition.validate` receiver; NUCLEUS inner membrane testing (all-gates coordination)
+
+### For Overwatch
+
+biomeOS has no remaining items in the Wave 157j critical path or active bugs list. The "biomeOS category shadow" entry should be struck from future blurbs. The "Atomic compositions" evolution item should note biomeOS half complete (orchestration + gossip emission + verify contract defined), primalSpring half pending (validation receiver + convergence integration).
