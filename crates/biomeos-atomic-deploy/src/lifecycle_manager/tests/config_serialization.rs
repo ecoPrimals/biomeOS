@@ -131,6 +131,7 @@ fn test_primal_metrics_serialization() {
         health_failures: 5,
         last_health_latency_ms: 12,
         requests_served: 1000,
+        last_resurrection_at: Some(chrono::Utc::now()),
     };
     let json = serde_json::to_string(&metrics).expect("serialize");
     let parsed: PrimalMetrics = serde_json::from_str(&json).expect("parse");

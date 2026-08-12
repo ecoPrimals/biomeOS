@@ -140,12 +140,27 @@ impl LifecycleManager {
                     );
                 }
 
+                // Rapid-restart detection: if primal was resurrected recently and
+                // crashed again, carry forward the cumulative count to prevent
+                // spawn storms. Only reset to 0 if it was stable long enough.
+                let resurrection_attempts =
+                    if let Some(last_res) = primal.metrics.last_resurrection_at {
+                        let elapsed = chrono::Utc::now() - last_res;
+                        if elapsed < chrono::Duration::seconds(120) {
+                            primal.metrics.resurrection_count
+                        } else {
+                            0
+                        }
+                    } else {
+                        0
+                    };
+
                 primal.state = LifecycleState::Degraded {
                     since: chrono::Utc::now(),
                     reason: health_result
                         .message
                         .unwrap_or_else(|| "Health check failed".to_string()),
-                    resurrection_attempts: 0,
+                    resurrection_attempts,
                 };
 
                 // Only trigger resurrection for biomeOS-managed primals

@@ -11,7 +11,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Tests | 2,695+ (biomeos-atomic-deploy: 1604, biomeos-types: 1091) pass, 0 failures |
+| Tests | 2,697+ (biomeos-atomic-deploy: 1606, biomeos-types: 1091) pass, 0 failures |
 | Clippy | 0 warnings (pedantic+nursery, --all-targets) |
 | Unsafe blocks | 0 (`#![forbid(unsafe_code)]` on all crates) |
 | C dependencies | 0 (pure Rust stack: blake3 pure, flate2 rust_backend, rustix zero-libc) |
@@ -115,6 +115,10 @@ Config: `toml`, `serde-saphyr` (YAML), `clap`
 ## Posture
 
 biomeOS is in **STAGE 2 NEURAL API ACTIVATION** (G67). G64+G65+G66 COMPLETE (cephalization trilogy). G22 COMPLETE. G72 Tier 1 CLEAN. 5-gate gossip mesh ACTIVE. Category shadow FIXED.
+
+**Wave 157k — POST-PANDEMIC EVOLUTION (Aug 12, 2026)**:
+- **P2 FIX: skunkBat spawn leak** — rapid-restart detection in resurrection path. `last_resurrection_at` timestamp prevents spawn storms by carrying forward cumulative resurrection count when a primal crashes within 120s of its last resurrection. Previously, each Degraded transition reset `resurrection_attempts: 0`, allowing infinite spawn loops (~256/10h).
+- **Pre-existing fix: `translations_with_prefix`** — missing method on `CapabilityTranslationRegistry` (used by nest_atomic handler) added.
 
 **Wave 157i — POST-PANDEMIC CASCADE (Aug 11, 2026)**:
 - **Composition lifecycle (deploy→register→gossip→verify)**: `composition.orchestrate` now wires the full atomic lifecycle — post-deploy gossip advertisement via swarmVine + composition validation via primalSpring. Both steps are best-effort/graceful (no hard failure when swarmVine or primalSpring unavailable).

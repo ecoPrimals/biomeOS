@@ -638,3 +638,66 @@ The blurb listing is a reporting lag. Both items were pushed to golgiBody before
 ### For Overwatch
 
 biomeOS has no remaining items in the Wave 157j critical path or active bugs list. The "biomeOS category shadow" entry should be struck from future blurbs. The "Atomic compositions" evolution item should note biomeOS half complete (orchestration + gossip emission + verify contract defined), primalSpring half pending (validation receiver + convergence integration).
+
+---
+
+## Addendum 16 — Wave 157k: P2 skunkBat Spawn Leak Fix
+
+**Date**: August 12, 2026
+**Severity**: P2 (was causing 256 orphan forks in 10h)
+**Reporter**: southGate canary
+
+### Root Cause
+
+The lifecycle resurrection path had no rapid-restart detection. When a primal's old binary crashes quickly after resurrection:
+
+```text
+10s health loop → 3 failures → Degraded { resurrection_attempts: 0 }  ← BUG: always 0
+  → attempt_resurrection (spawn #N)
+  → new binary crashes (old/incompatible)
+  → state → Incubating → health fails → Degraded { resurrection_attempts: 0 }  ← RESET
+  → attempt_resurrection (spawn #N+1)
+  → repeat (~every 2.3 min = 256 in 10h)
+```
+
+The `resurrection_attempts` field in `LifecycleState::Degraded` was always initialized to `0` when transitioning from Active/Incubating → Degraded (monitoring.rs line 148). This meant `max_attempts` (5) was never exhausted across degradation cycles — only within a single cycle. A primal that died quickly enough to not reach 5 consecutive attempts within one cycle would restart the counter on the next degradation event.
+
+### Fix
+
+Added **rapid-restart detection** using a `last_resurrection_at` timestamp on `PrimalMetrics`:
+
+1. **`types.rs`**: Added `last_resurrection_at: Option<DateTime<Utc>>` to `PrimalMetrics`
+2. **`resurrection.rs`**: Sets `last_resurrection_at = Some(Utc::now())` when spawning
+3. **`monitoring.rs`**: When transitioning to Degraded, checks if last resurrection was within 120s:
+   - **Recent** (< 120s): carries forward `metrics.resurrection_count` as `resurrection_attempts` → rapid backoff → exhaustion → Apoptosis
+   - **Stable** (≥ 120s or never resurrected): resets to 0 (genuine fresh degradation, deserves fresh attempts)
+
+### Impact
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Spawn storm (crashing binary) | Infinite (~26/hr) | Max 5 then Apoptosis |
+| Healthy primal crash recovery | 5 attempts | 5 attempts (unchanged) |
+| Stable primal late crash | 5 attempts | 5 attempts (unchanged) |
+
+### Also Fixed
+
+**`translations_with_prefix`** — pre-existing missing method on `CapabilityTranslationRegistry` used by `nest_atomic` handler. Previously masked by incremental compilation. Added proper implementation.
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `lifecycle_manager/types.rs` | +`last_resurrection_at` field on `PrimalMetrics` |
+| `lifecycle_manager/monitoring.rs` | Rapid-restart detection in Degraded transition |
+| `lifecycle_manager/resurrection.rs` | Set `last_resurrection_at` on spawn |
+| `lifecycle_manager/tests/lifecycle_operations.rs` | +2 tests: rapid-restart carries forward, stable primal gets fresh |
+| `lifecycle_manager/tests/config_serialization.rs` | Updated metrics construction |
+| `capability_translation/mod.rs` | +`translations_with_prefix` method |
+
+### Verification
+
+- `cargo check`: clean
+- `cargo clippy --all-targets`: 0 warnings
+- `cargo test --lib -p biomeos-atomic-deploy`: **1606 pass, 0 fail** (+2 new)
+- Total: **2697 pass, 0 fail**

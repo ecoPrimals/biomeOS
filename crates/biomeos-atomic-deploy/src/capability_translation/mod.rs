@@ -217,15 +217,16 @@ impl CapabilityTranslationRegistry {
         }
     }
 
-    /// List full translation entries whose semantic name starts with `prefix`.
+    /// List all translations whose semantic name starts with the given prefix.
     ///
-    /// Unlike [`list_translations`], this returns the full [`CapabilityTranslation`]
-    /// including provider, socket, ribocipher flag, etc.
+    /// Returns references to `CapabilityTranslation` entries matching `prefix.`
+    /// (with dot separator) or exactly equal to `prefix`.
     #[must_use]
     pub fn translations_with_prefix(&self, prefix: &str) -> Vec<&CapabilityTranslation> {
+        let dot_prefix = format!("{prefix}.");
         self.translations
             .values()
-            .filter(|t| t.semantic.starts_with(prefix))
+            .filter(|t| t.semantic.starts_with(&dot_prefix) || t.semantic == prefix)
             .collect()
     }
 
@@ -363,9 +364,6 @@ impl CapabilityTranslationRegistry {
     }
 
     /// Load translations from a TOML configuration file, using an explicit family_id.
-    ///
-    /// Respects both per-entry `ribocipher` flags and domain-level inheritance
-    /// from `[domains.<domain>].ribocipher = true`.
     pub fn load_from_config_for_family<F>(
         &mut self,
         config_path: impl AsRef<std::path::Path>,
@@ -384,29 +382,10 @@ impl CapabilityTranslationRegistry {
         let family_id = family_id_override
             .map(String::from)
             .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
-
-        // Build domain→ribocipher lookup from [domains.*] for inheritance
-        let mut domain_ribocipher: std::collections::HashMap<&str, bool> =
-            std::collections::HashMap::new();
-        if let Some(domains) = config.get("domains").and_then(|d| d.as_table()) {
-            for (name, entry) in domains {
-                let requires = entry
-                    .get("ribocipher")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false);
-                domain_ribocipher.insert(name.as_str(), requires);
-            }
-        }
-
         let mut count = 0;
 
         if let Some(translations) = config.get("translations").and_then(|t| t.as_table()) {
             for (domain, domain_translations) in translations {
-                let domain_requires_ribocipher = domain_ribocipher
-                    .get(domain.as_str())
-                    .copied()
-                    .unwrap_or(false);
-
                 if let Some(domain_table) = domain_translations.as_table() {
                     for (semantic, translation) in domain_table {
                         if let Some(trans_table) = translation.as_table() {
@@ -418,21 +397,15 @@ impl CapabilityTranslationRegistry {
                                 .get("method")
                                 .and_then(|v| v.as_str())
                                 .unwrap_or(semantic);
-                            let entry_ribocipher = trans_table
-                                .get("ribocipher")
-                                .and_then(|v| v.as_bool())
-                                .unwrap_or(false);
-                            let use_ribocipher = entry_ribocipher || domain_requires_ribocipher;
 
                             if !provider.is_empty() {
                                 let socket = socket_resolver(provider, &family_id);
-                                self.register_translation_full(
+                                self.register_translation(
                                     semantic.clone(),
                                     provider,
                                     method,
                                     socket,
                                     None,
-                                    use_ribocipher,
                                 );
                                 count += 1;
                             }

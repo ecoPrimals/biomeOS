@@ -26,13 +26,27 @@ impl NeuralApiServer {
             );
         }
 
-        // 2. Bridge domain providers from capability_registry.toml into the
-        //    NeuralRouter so capability.call can discover which primal handles
-        //    each capability domain. Translation entries are already loaded
-        //    (with ribocipher flags) by load_defaults() above — no re-load needed.
+        // 2. Overlay with config/capability_registry.toml if present
         {
             let config_path = self.graphs_dir.join("../config/capability_registry.toml");
             if config_path.exists() {
+                let mut registry = self.translation_registry.write().await;
+                match registry.load_from_config_for_family(
+                    &config_path,
+                    |provider, family_id| {
+                        crate::capability_translation::resolve_primal_socket(provider, family_id)
+                    },
+                    Some(&self.family_id),
+                ) {
+                    Ok(count) => info!(
+                        "📚 Loaded {} translations from capability_registry.toml",
+                        count
+                    ),
+                    Err(e) => warn!("⚠️  Failed to load capability_registry.toml: {}", e),
+                }
+
+                // Bridge domain providers into the NeuralRouter so capability.call
+                // can discover which primal handles each capability domain.
                 if let Ok(config_content) = std::fs::read_to_string(&config_path) {
                     if let Ok(config) = config_content.parse::<toml::Value>() {
                         if let Some(domains) = config.get("domains").and_then(|d| d.as_table()) {

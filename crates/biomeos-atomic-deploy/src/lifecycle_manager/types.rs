@@ -193,6 +193,12 @@ pub struct PrimalMetrics {
 
     /// Requests served (if available)
     pub requests_served: u64,
+
+    /// Timestamp of the most recent resurrection attempt.
+    /// Used for rapid-restart detection: if a primal is degraded again within
+    /// `RAPID_RESTART_WINDOW` of its last resurrection, the cumulative
+    /// resurrection_count is carried forward to prevent spawn storms.
+    pub last_resurrection_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[cfg(test)]

@@ -78,6 +78,7 @@ impl LifecycleManager {
         }
 
         primal.metrics.resurrection_count += 1;
+        primal.metrics.last_resurrection_at = Some(chrono::Utc::now());
 
         let has_pid = primal.pid.is_some();
 
