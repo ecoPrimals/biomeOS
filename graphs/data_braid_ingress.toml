@@ -1,0 +1,238 @@
+# Data Braid Ingress Graph — Bulk Dataset Provenance Pipeline
+#
+# Full braiding pipeline for data directories: ingest into CAS, create DAG
+# session, dehydrate, commit to spine, sign, and attribute via sweetGrass.
+# This is the graph-composition equivalent of `membrane content.braid`.
+#
+# Flow:
+#   1. content.ingest → CAS manifest (nestGate)
+#   2. dag.session.create → session_id (rhizoCrypt)
+#   3. dag.event.append_batch → events from manifest (rhizoCrypt)
+#   4. dag.dehydration.trigger → merkle_root (rhizoCrypt)
+#   5. spine.create + session.commit (loamSpine)
+#   6. crypto.sign (bearDog)
+#   7. braid.create (sweetGrass)
+#
+# Required input variables:
+#   ${DATA_PATH}    — path to dataset directory to braid
+#   ${DATASET_NAME} — human-readable dataset identifier
+#   ${FAMILY_ID}    — ecoPrimals family ID
+#   ${COMMITTER}    — committer DID (e.g. did:eco:westgate)
+#
+# Required: nestGate + rhizoCrypt + loamSpine + bearDog + sweetGrass
+# Invocation: membrane deploy.graph data_braid_ingress \
+#   DATA_PATH=/mnt/nestgate/cold/zfs/data/myDataset \
+#   DATASET_NAME=myDataset FAMILY_ID=westgate-tower-155f \
+#   COMMITTER=did:eco:westgate
+
+[graph]
+id = "data_braid_ingress"
+version = "1.0.0"
+description = "Bulk dataset braiding: CAS ingest → DAG → spine → sign → braid"
+coordination = "Sequential"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: VERIFY PROVENANCE STACK
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "verify-cas"
+output = "cas_healthy"
+capabilities = ["storage"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "nestgate"
+
+[nodes.operation.params]
+method = "health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "verify-dag"
+output = "dag_healthy"
+capabilities = ["dag"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "rhizocrypt"
+
+[nodes.operation.params]
+method = "health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "verify-spine"
+output = "spine_healthy"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "loamspine"
+
+[nodes.operation.params]
+method = "health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: INGEST INTO CAS
+# content.ingest: recursively hash directory contents into nestGate CAS
+# Returns manifest: { filename → blake3_hash }
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "ingest"
+depends_on = ["verify-cas"]
+output = "cas_manifest"
+capabilities = ["storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "content.ingest"
+params = { path = "${DATA_PATH}", recursive = true }
+
+[nodes.constraints]
+timeout_ms = 600000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: CREATE DAG SESSION + APPEND EVENTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "create-session"
+depends_on = ["verify-dag", "ingest"]
+output = "dag_session"
+capabilities = ["dag"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "dag.session.create"
+params = { name = "${DATASET_NAME}", committer = "${COMMITTER}" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "append-events"
+depends_on = ["create-session"]
+output = "append_summary"
+capabilities = ["dag"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "dag.event.append_batch"
+params = { session_id = "${DAG_SESSION.session_id}", events = "${CAS_MANIFEST.entries}", batch_size = 500 }
+
+[nodes.constraints]
+timeout_ms = 300000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: DEHYDRATE → MERKLE ROOT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "dehydrate"
+depends_on = ["append-events"]
+output = "dehydration"
+capabilities = ["dehydration"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "dag.dehydration.trigger"
+params = { session_id = "${DAG_SESSION.session_id}" }
+
+[nodes.constraints]
+timeout_ms = 120000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 5: SPINE COMMIT (loamSpine permanence)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "create-spine"
+depends_on = ["verify-spine"]
+output = "spine_ref"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "spine.create"
+params = { name = "${DATASET_NAME}", committer = "${COMMITTER}" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "commit-session"
+depends_on = ["dehydrate", "create-spine"]
+output = "commit_ref"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "session.commit"
+params = { spine_id = "${SPINE_REF.spine_id}", session_id = "${DAG_SESSION.session_id}", merkle_root = "${DEHYDRATION.merkle_root}", vertex_count = "${APPEND_SUMMARY.event_count}", committer = "${COMMITTER}" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 6: SIGN (bearDog Ed25519)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "sign"
+depends_on = ["dehydrate"]
+output = "signature"
+capabilities = ["crypto"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "crypto.sign"
+params = { message = "${DEHYDRATION.merkle_root}" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 7: ATTRIBUTION BRAID (sweetGrass)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "braid"
+depends_on = ["commit-session", "sign"]
+output = "braid_ref"
+capabilities = ["attribution"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "braid.create"
+params = { data_hash = "${DEHYDRATION.merkle_root}", strand_id = "${DATASET_NAME}", metadata = { dataset = "${DATASET_NAME}", committer = "${COMMITTER}", family_id = "${FAMILY_ID}", spine_id = "${SPINE_REF.spine_id}", signature = "${SIGNATURE.signature}", file_count = "${CAS_MANIFEST.file_count}", total_bytes = "${CAS_MANIFEST.total_bytes}" } }
+
+[nodes.constraints]
+timeout_ms = 15000
