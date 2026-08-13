@@ -441,6 +441,115 @@ impl NeuralApiServer {
         }
     }
 
+    /// Auto-announce discovered primals whose translations exist in the
+    /// TOML registry but whose method registrations are missing or stale.
+    ///
+    /// After auto-discovery registers capability *domains*, this method
+    /// bridges the gap for primals that expose *methods* (e.g. sweetGrass
+    /// with `braid.verify`, `braid.create`, etc.) by synthesizing the
+    /// equivalent of `primal.announce` from the TOML translation registry.
+    ///
+    /// This eliminates the "sweetGrass needs manual re-announce after biomeOS
+    /// restart" problem — methods are populated from the TOML as soon as the
+    /// primal's socket is discovered.
+    pub(crate) async fn auto_announce_from_translations(&self) {
+        let capabilities = self.router.list_capabilities().await;
+
+        // Phase 1: collect (primal_name, socket) pairs from discovered capabilities
+        let mut primal_sockets: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
+
+        for (_capability, providers) in &capabilities {
+            for provider in providers {
+                let primal_name: &str = &provider.primal_name;
+                if primal_sockets.contains_key(primal_name) {
+                    continue;
+                }
+                let socket_str = match &provider.endpoint {
+                    biomeos_core::TransportEndpoint::UnixSocket { path } => {
+                        path.to_string_lossy().to_string()
+                    }
+                    biomeos_core::TransportEndpoint::TcpSocket { host, port } => {
+                        format!("tcp://{}:{}", host, port)
+                    }
+                    _ => continue,
+                };
+                primal_sockets.insert(primal_name.to_string(), socket_str);
+            }
+        }
+
+        if primal_sockets.is_empty() {
+            return;
+        }
+
+        // Phase 2: for each discovered primal, check TOML translations and update sockets
+        let mut announced = 0usize;
+
+        for (primal_name, socket_str) in &primal_sockets {
+            let mut reg = self.translation_registry.write().await;
+            let toml_methods = reg.provider_capabilities(primal_name);
+            if toml_methods.is_empty() {
+                continue;
+            }
+
+            let sample_method = toml_methods.first().cloned().unwrap_or_default();
+            let needs_update = reg.get_translation(&sample_method).map_or(true, |t| {
+                t.socket.is_empty() || t.socket != *socket_str
+            });
+
+            if !needs_update {
+                continue;
+            }
+
+            let mut methods_registered = 0usize;
+            let methods: Vec<String> = toml_methods;
+
+            // Collect existing actual_method names before mutating
+            let method_map: Vec<(String, String)> = methods
+                .iter()
+                .map(|m| {
+                    let actual = reg
+                        .get_translation(m)
+                        .map(|t| t.actual_method.clone())
+                        .unwrap_or_else(|| m.clone());
+                    (m.clone(), actual)
+                })
+                .collect();
+
+            for (method, actual_method) in &method_map {
+                let use_ribocipher = method
+                    .split_once('.')
+                    .map(|(domain, _)| reg.domain_requires_ribocipher(domain))
+                    .unwrap_or(false);
+
+                reg.register_translation_full(
+                    method,
+                    primal_name,
+                    actual_method,
+                    socket_str,
+                    None,
+                    use_ribocipher,
+                );
+                methods_registered += 1;
+            }
+
+            if methods_registered > 0 {
+                info!(
+                    "🔄 Auto-announced {} — {} methods, socket: {}",
+                    primal_name, methods_registered, socket_str,
+                );
+                announced += 1;
+            }
+        }
+
+        if announced > 0 {
+            info!(
+                "✅ Auto-announce: updated {} provider(s) from TOML translations",
+                announced
+            );
+        }
+    }
+
     pub(crate) async fn rescan_primals(&self) -> anyhow::Result<serde_json::Value> {
         let before = self.router.list_capabilities().await.len();
         self.discover_and_register_primals().await;

@@ -182,7 +182,14 @@ impl NeuralApiServer {
         // 5. Auto-discover running primals and register their capabilities
         self.discover_and_register_primals().await;
 
-        // 5a. Persist the fully-populated registry for next cold start.
+        // 5a. Auto-announce: bridge discovered primals to TOML translation
+        // methods. Primals like sweetGrass declare methods (braid.verify, etc.)
+        // in capability_registry.toml — this step populates them with the
+        // discovered socket so they're routable immediately without a manual
+        // primal.announce call.
+        self.auto_announce_from_translations().await;
+
+        // 5a-persist. Persist the fully-populated registry for next cold start.
         {
             let socket_dirs = crate::handlers::TopologyHandler::get_socket_directories();
             if let Some(dir) = socket_dirs.first() {
@@ -216,6 +223,7 @@ impl NeuralApiServer {
                 loop {
                     tokio::time::sleep(DISCOVERY_SWEEP_INTERVAL).await;
                     server.discover_and_register_primals().await;
+                    server.auto_announce_from_translations().await;
                     let socket_dirs = crate::handlers::TopologyHandler::get_socket_directories();
                     if let Some(dir) = socket_dirs.first() {
                         server.router.persist_capability_registry(dir).await;
