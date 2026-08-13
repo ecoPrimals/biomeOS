@@ -234,7 +234,9 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
         .and_then(|p| p.subcommand.as_deref())
         .or(defaults.subcommand.as_deref())
         .unwrap_or("server");
-    cmd.arg(subcommand);
+    if !subcommand.is_empty() {
+        cmd.arg(subcommand);
+    }
 
     let pass_socket = profile
         .and_then(|p| p.pass_socket_flag)
@@ -262,6 +264,7 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
     // Static env vars from profile (with variable substitution)
     // $family_id / $node_id → literal values from config
     // $UPPER_CASE → passthrough from parent process environment
+    // ${UPPER_CASE} → inline env var expansion (can be embedded in paths)
     let env_vars = profile.map_or(&defaults.env_vars, |p| &p.env_vars);
     for (key, value) in env_vars {
         let resolved = if value.starts_with('$')
@@ -276,9 +279,19 @@ pub(crate) fn build_primal_command_with(config: &PrimalCommandConfig<'_>) -> std
                 Err(_) => continue,
             }
         } else {
-            value
+            let mut s = value
                 .replace("$family_id", config.family_id)
-                .replace("$node_id", config.node_id)
+                .replace("$node_id", config.node_id);
+            while let Some(start) = s.find("${") {
+                if let Some(end) = s[start..].find('}') {
+                    let var_name = &s[start + 2..start + end].to_string();
+                    let replacement = std::env::var(var_name).unwrap_or_default();
+                    s = format!("{}{}{}", &s[..start], replacement, &s[start + end + 1..]);
+                } else {
+                    break;
+                }
+            }
+            s
         };
         cmd.env(key, &resolved);
     }

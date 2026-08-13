@@ -79,6 +79,7 @@ family_id = "${FAMILY_ID}"
 [nodes.operation.environment]
 SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/membrane/songbird-${FAMILY_ID}.sock"
 BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
+BIOMEOS_RUNTIME_DIR = "${XDG_RUNTIME_DIR}/membrane"
 RUST_LOG = "swarmvine=info"
 
 [nodes.constraints]
