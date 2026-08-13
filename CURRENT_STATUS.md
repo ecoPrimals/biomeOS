@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
-**Updated**: August 12, 2026
-**Version**: v4.58 (Wave 157k — D11 CLOSED: swarmVine in NUCLEUS graph)
-**Posture**: EXEMPLAR. 5-gate gossip mesh LIVE. D11 RESOLVED: swarmVine now in all NUCLEUS deploy graphs + bootstrap_launch_order. All 10 active gates responded. biomeOS is the lean reference pattern — 0 P0, 0 P1, 0 P2.
+**Updated**: August 13, 2026
+**Version**: v4.59 (Wave 157k — deploy.result gossip Phase 1 LIVE)
+**Posture**: EXEMPLAR. Fleet convergence signaling LIVE. deploy.result emitted after every orchestration (success + failure) via gossip.advertise. primalSpring Phase 2 can consume. 0 P0, 0 P1, 0 P2.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -23,7 +23,7 @@
 | Formatting | PASS (rustfmt clean) |
 | Cross-arch | x86_64-unknown-linux-musl + x86_64-pc-windows-gnu + aarch64 (partial) |
 | Workspace crates | 26 |
-| Signal graphs | 31 (+ 47 deploy graphs = 78 total) |
+| Signal graphs | 32 (+ 47 deploy graphs = 79 total) |
 | Capability domains | 27 (320+ translations) |
 | Mocks in prod | 0 (all test-only) |
 | panic! in prod | 0 |

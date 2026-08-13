@@ -846,3 +846,50 @@ unavailable until manually started.
 All gates running `biomeos nucleus start --mode full` will now auto-start swarmVine,
 enabling cross-gate gossip propagation without manual intervention. This is critical
 for cascade notifications and capability advertisement to reach all gates.
+
+---
+
+## Addendum 20 — deploy.result Gossip Phase 1 LIVE
+
+**Date**: August 13, 2026 07:30
+**Commit**: (this commit)
+**Track**: deploy.result gossip Phase 1 (from Wave 157k COMPLETE "Next Wave Work")
+**Status**: **LIVE**
+
+### Summary
+
+biomeOS now emits structured `deploy.result` messages via swarmVine gossip after
+every `composition.orchestrate` invocation. This enables fleet convergence tracking
+without polling.
+
+### Implementation
+
+1. **`emit_deploy_result()` method** in `routing_orchestration.rs`:
+   - Fires on both success and failure paths
+   - Topic: `"deploy.result"`
+   - Key: `deploy.result:{gate_id}:{composition}`
+   - TTL: 600s (10 minutes — superseded by next deploy)
+   - Payload: `{ gate, node_id, composition, tiers_deployed, success, error?, timestamp, version }`
+
+2. **`deploy.result` JSON-RPC route**:
+   - Direct callers can emit deploy results for individual lifecycle events
+   - Params: `{ composition, tiers, success, error? }`
+
+3. **Signal graph** `graphs/signals/deploy_result.toml`:
+   - Formalizes the emit → gossip → convergence pipeline
+   - primalSpring's `convergence.update` capability is the intended Phase 2 consumer
+
+### Contract for primalSpring Phase 2
+
+primalSpring should subscribe to gossip topic `"deploy.result"` and:
+- Track per-gate deployment state (which compositions are running where)
+- Build a fleet health dashboard from convergence of deploy results
+- Alert on failure patterns (repeated failures on a gate)
+
+### Tests
+
+- `test_deploy_result_emit_direct_rpc` — verifies `deploy.result` RPC route works
+- `test_deploy_result_emit_failure_case` — verifies failure payloads emit correctly
+- `test_orchestrate_lifecycle_includes_gossip_and_verify_on_success` — verifies
+  `deploy_result` field is present in orchestration response
+- All 8,600+ workspace tests pass

@@ -11,6 +11,35 @@ use serde_json::{Value, json};
 use super::NeuralApiServer;
 
 impl NeuralApiServer {
+    /// Handle direct `deploy.result` RPC calls from external callers.
+    ///
+    /// Allows lifecycle events (individual primal starts/stops) to be signaled
+    /// to the gossip mesh without going through full orchestration.
+    /// Expected params: `{ composition, tiers, success, error? }`
+    pub(super) async fn handle_deploy_result_emit(
+        &self,
+        params: &Option<Value>,
+    ) -> anyhow::Result<Value> {
+        use anyhow::Context;
+
+        let params = params.as_ref().context("Missing parameters")?;
+        let composition = params["composition"]
+            .as_str()
+            .unwrap_or("unknown");
+        let success = params["success"].as_bool().unwrap_or(true);
+        let error = params["error"].as_str();
+
+        let tiers: Vec<&str> = params["tiers"]
+            .as_array()
+            .map(|a| a.iter().filter_map(|v| v.as_str()).collect())
+            .unwrap_or_default();
+
+        let result = self
+            .emit_deploy_result(composition, &tiers, success, error)
+            .await;
+        Ok(result)
+    }
+
     /// Orchestrate a full composition — sequences prerequisites then executes the target.
     ///
     /// For `nucleus`, this means: tower → nest + node (parallel) → nucleus_complete.
@@ -101,11 +130,19 @@ impl NeuralApiServer {
                             "graph": graph_id,
                             "error": e.to_string(),
                         }));
+                        let error_msg = format!("Composition '{composition}' failed: {e}");
+                        self.emit_deploy_result(
+                            target,
+                            &deployed_tiers,
+                            false,
+                            Some(&error_msg),
+                        )
+                        .await;
                         return Ok(json!({
                             "target": target,
                             "completed": false,
                             "steps": steps,
-                            "error": format!("Composition '{composition}' failed: {e}"),
+                            "error": error_msg,
                         }));
                     }
                 }
@@ -115,11 +152,15 @@ impl NeuralApiServer {
                     "action": "blocked",
                     "blocked_by": result.get("blocked_by"),
                 }));
+                let error_msg =
+                    format!("Composition '{composition}' blocked by prerequisites");
+                self.emit_deploy_result(target, &deployed_tiers, false, Some(&error_msg))
+                    .await;
                 return Ok(json!({
                     "target": target,
                     "completed": false,
                     "steps": steps,
-                    "error": format!("Composition '{composition}' blocked by prerequisites"),
+                    "error": error_msg,
                 }));
             }
         }
@@ -136,12 +177,18 @@ impl NeuralApiServer {
             .verify_composition_in_mesh(target, &deployed_tiers)
             .await;
 
+        // Phase 1: emit deploy.result gossip for fleet convergence tracking.
+        let deploy_result_gossip = self
+            .emit_deploy_result(target, &deployed_tiers, true, None)
+            .await;
+
         Ok(json!({
             "target": target,
             "completed": true,
             "steps": steps,
             "gossip": gossip_result,
             "verify": verify_result,
+            "deploy_result": deploy_result_gossip,
         }))
     }
 
@@ -208,6 +255,63 @@ impl NeuralApiServer {
             Ok(v) => json!({ "status": "verified", "result": v }),
             Err(e) => {
                 tracing::debug!("Composition verify best-effort failed: {e}");
+                json!({ "status": "unavailable", "error": e.to_string() })
+            }
+        }
+    }
+
+    /// Emit a `deploy.result` gossip message for fleet convergence tracking.
+    ///
+    /// Phase 1 of the deployment signaling evolution. Every orchestration outcome
+    /// (success or failure) is broadcast to the gossip mesh so other gates and
+    /// primalSpring can track fleet-wide deployment state.
+    ///
+    /// Best-effort — if swarmVine is unavailable the result is logged but not fatal.
+    async fn emit_deploy_result(
+        &self,
+        composition: &str,
+        deployed_tiers: &[&str],
+        success: bool,
+        error: Option<&str>,
+    ) -> Value {
+        let registry = self.translation_registry.read().await;
+
+        if !registry.has_capability("gossip.advertise") {
+            return json!({ "status": "skipped", "reason": "gossip.advertise not available" });
+        }
+
+        let gate_id = &self.family_id;
+        let node_id = std::env::var("NODE_ID").unwrap_or_else(|_| gate_id.clone());
+        let payload = json!({
+            "gate": gate_id,
+            "node_id": node_id,
+            "composition": composition,
+            "tiers_deployed": deployed_tiers,
+            "success": success,
+            "error": error,
+            "timestamp": chrono::Utc::now().to_rfc3339(),
+            "version": env!("CARGO_PKG_VERSION"),
+        });
+
+        let advertise_params = json!({
+            "topic": "deploy.result",
+            "key": format!("deploy.result:{}:{}", gate_id, composition),
+            "value": payload.to_string(),
+            "ttl_secs": 600,
+        });
+
+        match registry.call_capability("gossip.advertise", advertise_params).await {
+            Ok(v) => {
+                tracing::info!(
+                    gate = %gate_id,
+                    composition = %composition,
+                    success = %success,
+                    "deploy.result emitted to gossip mesh"
+                );
+                json!({ "status": "emitted", "result": v })
+            }
+            Err(e) => {
+                tracing::debug!("deploy.result gossip best-effort failed: {e}");
                 json!({ "status": "unavailable", "error": e.to_string() })
             }
         }

@@ -456,6 +456,10 @@ impl NeuralApiServer {
                 self.lifecycle_handler.composition_boot_order(params).await,
                 id,
             ),
+            // deploy.result — emit deployment outcome to gossip mesh (Phase 1 fleet signaling)
+            Route::DeployResultEmit => {
+                dispatch(self.handle_deploy_result_emit(params).await, id)
+            }
             // Composition deploy (alias for graph.execute — primalSpring contract)
             Route::CompositionDeploy => dispatch(self.graph_handler.execute(params).await, id),
             // Composition deploy shadow (dry-run validation)

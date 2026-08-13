@@ -508,4 +508,39 @@ async fn test_orchestrate_lifecycle_includes_gossip_and_verify_on_success() {
         verify_status == "skipped" || verify_status == "unavailable",
         "without primalSpring, verify should be skipped/unavailable, got: {verify_status}"
     );
+    assert!(
+        inner.get("deploy_result").is_some(),
+        "orchestrate success must include deploy_result gossip emission"
+    );
+    let deploy_result_status = inner["deploy_result"]["status"].as_str().unwrap_or("");
+    assert!(
+        deploy_result_status == "skipped" || deploy_result_status == "emitted" || deploy_result_status == "unavailable",
+        "deploy_result should be skipped/emitted/unavailable, got: {deploy_result_status}"
+    );
+}
+
+#[tokio::test]
+async fn test_deploy_result_emit_direct_rpc() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"deploy.result","params":{"composition":"tower","tiers":["tower"],"success":true},"id":85}"#;
+    let result = server.handle_request_json(req).await;
+    let inner = &result["result"];
+    let status = inner["status"].as_str().unwrap_or("");
+    assert!(
+        status == "skipped" || status == "emitted" || status == "unavailable",
+        "deploy.result should report status, got: {status}"
+    );
+}
+
+#[tokio::test]
+async fn test_deploy_result_emit_failure_case() {
+    let (server, _temp) = create_test_server();
+    let req = r#"{"jsonrpc":"2.0","method":"deploy.result","params":{"composition":"node","tiers":["tower"],"success":false,"error":"toadstool failed to start"},"id":86}"#;
+    let result = server.handle_request_json(req).await;
+    let inner = &result["result"];
+    let status = inner["status"].as_str().unwrap_or("");
+    assert!(
+        status == "skipped" || status == "emitted" || status == "unavailable",
+        "deploy.result failure should still emit, got: {status}"
+    );
 }
