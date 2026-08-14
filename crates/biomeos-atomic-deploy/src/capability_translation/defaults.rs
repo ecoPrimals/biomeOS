@@ -211,6 +211,7 @@ fn load_defaults_core(
                 ("content.list", "content.list"),
                 ("content.stat", "content.stat"),
                 ("content.ingest", "content.ingest"),
+                ("content.fetch", "content.fetch"),
                 ("content.publish", "content.publish"),
                 ("content.resolve", "content.resolve"),
                 ("content.promote", "content.promote"),

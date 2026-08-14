@@ -385,7 +385,7 @@ timeout_ms = 20000
 id = "nest_nestgate"
 depends_on = ["node_validate"]
 output = "nestgate_genesis"
-capabilities = ["storage", "provenance", "persistence"]
+capabilities = ["storage", "provenance", "persistence", "content"]
 
 [nodes.primal]
 by_capability = "storage"
@@ -416,6 +416,12 @@ timeout_ms = 60000
 "storage.retrieve_range" = "retrieve_range"
 "storage.object.size" = "object.size"
 "storage.namespaces.list" = "namespaces.list"
+"content.put" = "content.put"
+"content.get" = "content.get"
+"content.exists" = "content.exists"
+"content.list" = "content.list"
+"content.stat" = "content.stat"
+"content.ingest" = "content.ingest"
 
 # =============================================================================
 # PHASE 3b: GPU COMPUTE (barraCuda + coralReef)

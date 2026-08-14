@@ -114,7 +114,7 @@ timeout_ms = 45000
 id = "nestgate"
 depends_on = ["swarmvine"]
 output = "nestgate_ready"
-capabilities = ["storage"]
+capabilities = ["storage", "content"]
 
 [nodes.primal]
 by_capability = "storage"

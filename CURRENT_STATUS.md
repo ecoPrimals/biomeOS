@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
 **Updated**: August 14, 2026
-**Version**: v4.60 (Wave 157k Deep Interstadial — D12/D13 merged, all tracks DORMANT)
-**Posture**: EXEMPLAR. 0/0/0. All eastGate tracks DORMANT. D12/D13 merged from graftGate (swarmVine launch profile + ${VAR} expansion). deploy.result Phase 1 LIVE. sweetGrass auto-announce + data_braid_ingress graph absorbed. 12 gates ONLINE.
+**Version**: v4.61 (Wave 157k Enmeshment — content.put translation LIVE)
+**Posture**: EXEMPLAR. 0/0/0. content.put + content.fetch Neural API translation DONE (item #13 CLOSED). Deploy graphs + route table updated. D12/D13 merged. 12 gates ONLINE.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---

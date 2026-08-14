@@ -893,3 +893,44 @@ primalSpring should subscribe to gossip topic `"deploy.result"` and:
 - `test_orchestrate_lifecycle_includes_gossip_and_verify_on_success` — verifies
   `deploy_result` field is present in orchestration response
 - All 8,600+ workspace tests pass
+
+---
+
+## Addendum 21 — content.put Neural API Translation Entry (Wave 157k Enmeshment)
+
+**Date**: August 14, 2026 | **Wave**: 157k Enmeshment | **Status**: RESOLVED
+
+### Context
+
+Blurb item #13 (P2): nestGate confirmed `content.put` is wired on all 3 surfaces (UDS, HTTP, tarpc) + announced + registered. Gap is biomeOS Neural API translation table — calls to `content.put` from the mesh weren't being routed to nestGate by biomeOS.
+
+### Root Cause
+
+Deploy graphs (`nucleus_complete.toml`, `nucleus_simple.toml`, `gate2_nucleus.toml`) declared nestGate with `capabilities = ["storage", "provenance", "persistence"]` but omitted `"content"`. The `capabilities_provided` section only had `storage.*` methods. The Neural API route table (`route_table.rs`) had no `content.*` semantic routes.
+
+The Rust-level translation defaults (`defaults.rs`) already had `content.put`..`content.collections` but were missing `content.fetch` (which was added to the TOML config by commit `0020da47`).
+
+### Fixes Applied
+
+1. **Deploy graphs**: Added `"content"` to nestGate `capabilities` array and `content.put`, `content.get`, `content.exists`, `content.list`, `content.stat`, `content.ingest` to `capabilities_provided` in:
+   - `graphs/nucleus_complete.toml`
+   - `graphs/nucleus_simple.toml`
+   - `graphs/gate2_nucleus.toml`
+
+2. **Route table** (`route_table.rs`): Added 7 semantic routes for direct method-name dispatch:
+   - `content.put`, `content.get`, `content.exists`, `content.list`, `content.stat`, `content.ingest`, `content.fetch`
+
+3. **Rust defaults** (`defaults.rs`): Added `content.fetch` translation entry (consistency with TOML config).
+
+### Impact
+
+- All `content.*` RPC calls are now routable through biomeOS Neural API → nestGate
+- Deploy graphs correctly advertise nestGate's content capabilities during NUCLEUS bootstrap
+- AlphaFold ingress `content.fetch` path is fully wired
+- Blurb item #11 (Neural API translation registry audit) for `content.put` — **CLOSED**
+- Blurb item #13 (biomeOS `content.put` translation entry) — **CLOSED**
+
+### Remaining
+
+- Item #14: bearDog AEAD Neural API surfacing — **ironGate action** (not biomeOS)
+- All eastGate biomeOS items DONE. Status: DORMANT.

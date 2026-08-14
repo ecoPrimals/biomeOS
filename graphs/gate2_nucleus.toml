@@ -241,6 +241,7 @@ family_id = "${FAMILY_ID}"
 NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/membrane/neural-api-${FAMILY_ID}.sock"
 SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/membrane/songbird-${FAMILY_ID}.sock"
 BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/membrane/beardog-${FAMILY_ID}.sock"
+BIOMEOS_RUNTIME_DIR = "${XDG_RUNTIME_DIR}/membrane"
 RUST_LOG = "swarmvine=info"
 
 [nodes.constraints]
@@ -264,7 +265,7 @@ timeout_ms = 30000
 id = "gate2_nestgate"
 depends_on = ["gate2_beardog", "gate2_songbird", "gate2_swarmvine"]
 output = "nestgate_genesis"
-capabilities = ["storage", "provenance", "persistence"]
+capabilities = ["storage", "provenance", "persistence", "content"]
 
 [nodes.primal]
 by_capability = "storage"
@@ -291,6 +292,10 @@ timeout_ms = 60000
 "storage.retrieve" = "retrieve"
 "storage.stats" = "stats"
 "storage.health" = "health_check"
+"content.put" = "content.put"
+"content.get" = "content.get"
+"content.exists" = "content.exists"
+"content.ingest" = "content.ingest"
 
 # 2.2: Toadstool (GPU Compute — gate2 may have RTX 3090)
 [[nodes]]
