@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
-**Updated**: August 13, 2026
-**Version**: v4.59 (Wave 157k — deploy.result gossip Phase 1 LIVE)
-**Posture**: EXEMPLAR. Fleet convergence signaling LIVE. deploy.result emitted after every orchestration (success + failure) via gossip.advertise. primalSpring Phase 2 can consume. 0 P0, 0 P1, 0 P2.
+**Updated**: August 14, 2026
+**Version**: v4.60 (Wave 157k Deep Interstadial — D12/D13 merged, all tracks DORMANT)
+**Posture**: EXEMPLAR. 0/0/0. All eastGate tracks DORMANT. D12/D13 merged from graftGate (swarmVine launch profile + ${VAR} expansion). deploy.result Phase 1 LIVE. sweetGrass auto-announce + data_braid_ingress graph absorbed. 12 gates ONLINE.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -23,7 +23,7 @@
 | Formatting | PASS (rustfmt clean) |
 | Cross-arch | x86_64-unknown-linux-musl + x86_64-pc-windows-gnu + aarch64 (partial) |
 | Workspace crates | 26 |
-| Signal graphs | 32 (+ 47 deploy graphs = 79 total) |
+| Signal graphs | 32 (+ 48 deploy graphs = 80 total) |
 | Capability domains | 27 (320+ translations) |
 | Mocks in prod | 0 (all test-only) |
 | panic! in prod | 0 |
