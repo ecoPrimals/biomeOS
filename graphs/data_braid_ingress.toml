@@ -100,7 +100,7 @@ name = "capability_call"
 
 [nodes.operation.params]
 capability = "content.ingest"
-params = { path = "${DATA_PATH}", recursive = true }
+params = { directory = "${DATA_PATH}" }
 
 [nodes.constraints]
 timeout_ms = 600000

@@ -59,6 +59,7 @@ capabilities = [
 "crypto.x25519_generate_ephemeral" = { provider = "beardog", method = "x25519_generate_ephemeral" }
 "crypto.x25519_derive_secret" = { provider = "beardog", method = "x25519_derive_secret" }
 "crypto.sign_ed25519" = { provider = "beardog", method = "ed25519_sign" }
+"crypto.sign" = { provider = "beardog", method = "ed25519_sign" }
 "crypto.verify_ed25519" = { provider = "beardog", method = "ed25519_verify" }
 
 # JWT Operations
@@ -176,6 +177,7 @@ capabilities = [
 "content.list" = { provider = "nestgate", method = "content.list" }
 "content.stat" = { provider = "nestgate", method = "content.stat" }
 "content.ingest" = { provider = "nestgate", method = "content.ingest" }
+"content.fetch" = { provider = "nestgate", method = "content.fetch" }
 "content.publish" = { provider = "nestgate", method = "content.publish" }
 "content.resolve" = { provider = "nestgate", method = "content.resolve" }
 "content.promote" = { provider = "nestgate", method = "content.promote" }
