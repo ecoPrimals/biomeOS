@@ -1,0 +1,152 @@
+# RootPulse Harvest Workflow
+# Records per-target build provenance as the canonical drift authority.
+#
+# A "harvest" in RootPulse means:
+# 1. Query current build state from the foreman cascade
+# 2. Record each primal's binary provenance (commit, target, blake3, generation)
+# 3. Store provenance batch to content-addressed storage (NestGate)
+# 4. Append harvest entry to the provenance spine (LoamSpine)
+# 5. Attribute the harvest event (sweetGrass)
+#
+# The harvest graph is the canonical source of truth for binary drift detection.
+# sporeGate queries this via neuralAPI to determine which primals need rebuild.
+#
+# Required: Tower (BearDog + Songbird) + NestGate + LoamSpine
+# Optional: sweetGrass (attribution)
+#
+# Required input variables:
+#   ${TARGET_TRIPLE}  — build target (e.g. "x86_64-unknown-linux-musl")
+#   ${BUILDER_ID}     — gate performing the build (e.g. "ironGate")
+#   ${BATCH}          — JSON array of { primal, commit, blake3, generation, binary_size }
+#   ${SPINE_ID}       — provenance spine ID (string)
+#   ${AGENT_DID}      — builder DID, e.g. did:key:z6Mk... (string)
+#
+# Method names validated against primalSpring capability_registry.toml (May 7, 2026).
+
+[graph]
+id = "rootpulse_harvest"
+description = "RootPulse harvest: record per-target build provenance for drift detection"
+coordination = "Sequential"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: HEALTH CHECKS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "check_storage"
+output = "storage_healthy"
+capabilities = ["storage"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "nestgate"
+
+[nodes.operation.params]
+method = "health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "check_loamspine"
+output = "loamspine_healthy"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "loamspine"
+
+[nodes.operation.params]
+method = "health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: SIGN BATCH (BearDog)
+# Cryptographically sign the harvest batch for tamper detection.
+# Method: crypto.sign (BearDog)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "sign_batch"
+depends_on = ["check_storage"]
+output = "signed_batch"
+capabilities = ["crypto"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "crypto.sign"
+params = { message = "${BATCH}" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: STORE PROVENANCE BATCH (NestGate)
+# Persist the signed harvest batch to content-addressed storage.
+# Method: content.put (NestGate)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "store_harvest"
+depends_on = ["sign_batch"]
+output = "content_hash"
+capabilities = ["content"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "content.put"
+params = { key = "rootpulse:harvest:${TARGET_TRIPLE}:${BUILDER_ID}", value = "${SIGNED_BATCH}", family_id = "ecosystem" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: APPEND TO PROVENANCE SPINE (LoamSpine)
+# Record the harvest as a permanent history entry.
+# Method: entry.append (LoamSpine)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "append_harvest"
+depends_on = ["store_harvest", "check_loamspine"]
+output = "harvest_ref"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "entry.append"
+params = { spine_id = "${SPINE_ID}", entry = { type = "harvest", target = "${TARGET_TRIPLE}", builder = "${BUILDER_ID}", content_hash = "${CONTENT_HASH}", recorded_by = "${AGENT_DID}" } }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 5: ATTRIBUTION (sweetGrass, optional)
+# Method: braid.create (sweetGrass)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "attribute_harvest"
+depends_on = ["append_harvest"]
+output = "harvest_braid"
+capabilities = ["attribution"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "braid.create"
+params = { data_hash = "${HARVEST_REF}", source = "rootpulse:harvest", description = "Build harvest for ${TARGET_TRIPLE} by ${BUILDER_ID}", mime_type = "application/json", size = 0 }
+
+[nodes.constraints]
+timeout_ms = 15000

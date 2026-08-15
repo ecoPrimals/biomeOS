@@ -1,8 +1,8 @@
 # biomeOS — Current Status
 
 **Updated**: August 14, 2026
-**Version**: v4.61 (Wave 157k Enmeshment — content.put translation LIVE)
-**Posture**: EXEMPLAR. 0/0/0. content.put + content.fetch Neural API translation DONE (item #13 CLOSED). Deploy graphs + route table updated. D12/D13 merged. 12 gates ONLINE.
+**Version**: v4.62 (Wave 157k Enmeshment — rootPulse graph execution wiring)
+**Posture**: EXEMPLAR. 0/0/0. rootPulse graph execution WIRED (item #10). All 6 rootPulse graphs have full capability routing — dag.*, spine.*, entry.*, braid.*, crypto.*, content.* translations complete. 12 gates ONLINE.
 **Chain 1**: ALL 5 ITEMS COMPLETE (v4.44–v4.48)
 
 ---
@@ -23,7 +23,7 @@
 | Formatting | PASS (rustfmt clean) |
 | Cross-arch | x86_64-unknown-linux-musl + x86_64-pc-windows-gnu + aarch64 (partial) |
 | Workspace crates | 26 |
-| Signal graphs | 32 (+ 48 deploy graphs = 80 total) |
+| Signal graphs | 32 (+ 49 deploy graphs = 81 total) |
 | Capability domains | 27 (320+ translations) |
 | Mocks in prod | 0 (all test-only) |
 | panic! in prod | 0 |

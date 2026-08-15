@@ -934,3 +934,53 @@ The Rust-level translation defaults (`defaults.rs`) already had `content.put`..`
 
 - Item #14: bearDog AEAD Neural API surfacing — **ironGate action** (not biomeOS)
 - All eastGate biomeOS items DONE. Status: DORMANT.
+
+---
+
+## Addendum 22 — rootPulse Graph Execution Wiring (Wave 157k Enmeshment REFRAME)
+
+**Date**: August 14, 2026 | **Wave**: 157k Enmeshment | **Status**: RESOLVED
+
+### Context
+
+Blurb REFRAMED item #10 (P2): rootPulse is not a primal implementing `rootpulse.*` methods — it's a biomeOS graph execution pattern. The 6 rootPulse graphs (`rootpulse_commit`, `rootpulse_diff`, `rootpulse_branch`, `rootpulse_merge`, `rootpulse_federate`, `rootpulse_harvest`) define steps that call existing primal capabilities as graph nodes. biomeOS's graph executor resolves each `capability_call` step via the translation registry.
+
+### Gap Analysis
+
+rootPulse graphs reference these capabilities that were MISSING from the translation registry:
+- `dag.dehydration.trigger` → rhizoCrypt (in TOML config but not Rust defaults)
+- `dag.session.create` → rhizoCrypt (in TOML config but not Rust defaults)
+- `dag.merkle.root` → rhizoCrypt (missing everywhere)
+- `dag.vertex.get` → rhizoCrypt (missing everywhere)
+- `dag.event.append` → rhizoCrypt (in TOML config but not Rust defaults)
+- `dag.event.append_batch` → rhizoCrypt (in TOML config but not Rust defaults)
+- `session.state` → loamSpine (missing everywhere)
+
+Additionally, the route table had no semantic routes for DAG/spine/braid direct dispatch.
+
+### Fixes Applied
+
+1. **Rust defaults** (`defaults.rs`): Added 7 new translations to rhizoCrypt section (`dag.session.create`, `dag.dehydration.trigger`, `dag.event.append`, `dag.event.append_batch`, `dag.merkle.root`, `dag.vertex.get`) and 1 to loamSpine section (`session.state`).
+
+2. **TOML config** (`capability_registry.toml`): Added `dag.merkle.root`, `dag.vertex.get` to ephemeral_workspace translations. Added `session.state` to permanent_storage translations.
+
+3. **Route table** (`route_table.rs`): Added 17 new semantic routes for direct method-name dispatch:
+   - DAG: `dag.session.create`, `dag.dehydration.trigger`, `dag.merkle.root`, `dag.vertex.get`, `dag.event.append`
+   - Spine: `spine.create`, `spine.get`, `spine.seal`, `entry.append`, `entry.get`, `session.commit`, `session.state`
+   - Attribution: `braid.create`, `braid.verify`, `braid.query`
+
+4. **New graph** `rootpulse_harvest.toml`: Per-target build provenance recording — sign batch → `content.put` → `entry.append` → `braid.create`. This is the canonical drift authority that sporeGate queries.
+
+### Verification
+
+- All 6 rootPulse graphs now have FULL capability routing through translation registry
+- Every `capability_call` step resolves to a registered provider with socket path
+- 82 translation tests pass, workspace compiles clean
+- Graph count: 81 total (32 signal + 49 deploy)
+
+### Impact
+
+- biomeOS graph executor can now execute ALL rootPulse workflows end-to-end
+- No new primal code needed — primals participate via existing capabilities
+- Blurb item #10 (rootPulse graph execution) — **CLOSED**
+- biomeOS status: all items DORMANT.

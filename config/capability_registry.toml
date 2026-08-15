@@ -795,6 +795,8 @@ capabilities = [
 "dag.query" = { provider = "rhizocrypt", method = "dag.query" }
 "dag.session.create" = { provider = "rhizocrypt", method = "dag.session.create" }
 "dag.dehydration.trigger" = { provider = "rhizocrypt", method = "dag.dehydration.trigger" }
+"dag.merkle.root" = { provider = "rhizocrypt", method = "dag.merkle.root" }
+"dag.vertex.get" = { provider = "rhizocrypt", method = "dag.vertex.get" }
 
 [domains.permanent_storage]
 provider = "loamspine"
@@ -830,6 +832,7 @@ capabilities = [
 "spine.list" = { provider = "loamspine", method = "spine.list" }
 "spine.status" = { provider = "loamspine", method = "spine.status" }
 "session.commit" = { provider = "loamspine", method = "session.commit" }
+"session.state" = { provider = "loamspine", method = "session.state" }
 "entry.list" = { provider = "loamspine", method = "entry.list" }
 
 [domains.attribution]
