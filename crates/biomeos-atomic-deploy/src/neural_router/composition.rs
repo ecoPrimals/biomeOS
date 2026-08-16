@@ -163,7 +163,92 @@ impl CompositionPatternRegistry {
                 Arc::from(LOAMSPINE),
             ],
             tier: CompositionTier::Nest,
-            graph_file: None,
+            graph_file: Some("graphs/rootpulse_commit.toml".to_owned()),
+        });
+
+        registry.register(CompositionPattern {
+            name: Arc::from("rootpulse_harvest"),
+            methods: vec![
+                Arc::from("crypto.sign"),
+                Arc::from("content.put"),
+                Arc::from("spine.commit"),
+                Arc::from("braid.attribute"),
+            ],
+            primals: vec![
+                Arc::from(BEARDOG),
+                Arc::from(NESTGATE),
+                Arc::from(LOAMSPINE),
+                Arc::from(SWEETGRASS),
+            ],
+            tier: CompositionTier::Nest,
+            graph_file: Some("graphs/rootpulse_harvest.toml".to_owned()),
+        });
+
+        registry.register(CompositionPattern {
+            name: Arc::from("rootpulse_branch"),
+            methods: vec![
+                Arc::from("dag.session.create"),
+                Arc::from("spine.create"),
+                Arc::from("braid.attribute"),
+            ],
+            primals: vec![
+                Arc::from(RHIZOCRYPT),
+                Arc::from(LOAMSPINE),
+                Arc::from(SWEETGRASS),
+            ],
+            tier: CompositionTier::Nest,
+            graph_file: Some("graphs/rootpulse_branch.toml".to_owned()),
+        });
+
+        registry.register(CompositionPattern {
+            name: Arc::from("rootpulse_merge"),
+            methods: vec![
+                Arc::from("dag.dehydration.trigger"),
+                Arc::from("crypto.sign"),
+                Arc::from("spine.commit"),
+                Arc::from("braid.attribute"),
+            ],
+            primals: vec![
+                Arc::from(RHIZOCRYPT),
+                Arc::from(BEARDOG),
+                Arc::from(LOAMSPINE),
+                Arc::from(SWEETGRASS),
+            ],
+            tier: CompositionTier::Nest,
+            graph_file: Some("graphs/rootpulse_merge.toml".to_owned()),
+        });
+
+        registry.register(CompositionPattern {
+            name: Arc::from("rootpulse_diff"),
+            methods: vec![
+                Arc::from("spine.get"),
+                Arc::from("dag.merkle.root"),
+            ],
+            primals: vec![
+                Arc::from(LOAMSPINE),
+                Arc::from(RHIZOCRYPT),
+            ],
+            tier: CompositionTier::Nest,
+            graph_file: Some("graphs/rootpulse_diff.toml".to_owned()),
+        });
+
+        registry.register(CompositionPattern {
+            name: Arc::from("rootpulse_federate"),
+            methods: vec![
+                Arc::from("discovery.peers"),
+                Arc::from("spine.get"),
+                Arc::from("content.get"),
+                Arc::from("dag.event.append"),
+                Arc::from("spine.commit"),
+            ],
+            primals: vec![
+                Arc::from(SONGBIRD),
+                Arc::from(LOAMSPINE),
+                Arc::from(NESTGATE),
+                Arc::from(RHIZOCRYPT),
+            ],
+            tier: CompositionTier::Nest,
+            graph_file: Some("graphs/rootpulse_federate.toml".to_owned()),
         });
 
         registry.register(CompositionPattern {
@@ -511,7 +596,7 @@ mod tests {
     #[test]
     fn canonical_patterns_loaded() {
         let reg = CompositionPatternRegistry::with_canonical_patterns();
-        assert!(reg.len() >= 6);
+        assert!(reg.len() >= 11);
         assert!(reg.get("rootpulse_commit").is_some());
         assert!(reg.get("tower_atomic_bootstrap").is_some());
         assert!(reg.get("nest_store").is_some());
