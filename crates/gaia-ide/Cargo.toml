@@ -1,0 +1,47 @@
+[package]
+name = "gaia-ide"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Gaia IDE — sovereign agentic editor. Local Rust server wired into biomeOS neural."
+
+[[bin]]
+name = "gaia-ide"
+path = "src/main.rs"
+
+[dependencies]
+# Web framework — same stack as biomeos-api
+axum = { workspace = true }
+tower = { workspace = true, features = ["util"] }
+tower-http = { workspace = true, features = ["cors", "trace", "set-header", "fs"] }
+
+# Async runtime
+tokio = { workspace = true, features = ["net", "io-util", "fs", "signal", "process"] }
+
+# HTTP client for proxying to Forge/Ollama
+hyper = { workspace = true, features = ["client", "http1"] }
+hyper-util = { workspace = true, features = ["tokio", "client", "client-legacy", "http1"] }
+http-body-util = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+
+# biomeOS integration
+biomeos-core = { path = "../biomeos-core" }
+biomeos-types = { path = "../biomeos-types" }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Utilities
+chrono = { workspace = true }
+
+[lints]
+workspace = true

@@ -64,6 +64,7 @@ members = [
     "crates/biomeos-genomebin-v3",
     "crates/biomeos-genome-factory",
     "crates/biomeos-pseudospore",  # pseudoSpore envelope validation (NC-1.4)
+    "crates/gaia-ide",  # Gaia IDE — sovereign agentic editor (Monaco + Ollama + Forgejo)
 ]
 exclude = [
     "tools",    # Standalone workspace for dev/integration tools
@@ -85,7 +86,7 @@ categories = ["os", "distributed-systems", "virtualization"]
 
 [workspace.dependencies]
 # Canonical ecosystem types from cellMembrane
-cellmembrane-types = { path = "../../gardens/cellMembrane/crates/cellmembrane-types" }
+cellmembrane-types = { path = "../gardens/cellMembrane/crates/cellmembrane-types" }
 
 # Core dependencies
 tokio = { version = "1.0", default-features = false, features = ["rt-multi-thread", "macros", "sync", "time"] }
