@@ -93,6 +93,31 @@ pub async fn openai_compat_proxy(
     proxy_request(&target_with_query, req).await
 }
 
+/// Spine RSS proxy — routes to local Forge RSS feeds (the woven signal layer)
+///
+/// RSS spine IS the signal. MCP IS the stroll. They are WOVEN, not parallel.
+/// `GET /spine/rss/ecoPrimals/biomeOS.rss` → `GET {forge_url}/ecoPrimals/biomeOS.rss`
+/// `GET /spine/rss/ecoPrimals/biomeOS.atom` → `GET {forge_url}/ecoPrimals/biomeOS.atom`
+pub async fn spine_rss_proxy(
+    State(state): State<Arc<AppState>>,
+    Path(path): Path<String>,
+    req: Request<Body>,
+) -> impl IntoResponse {
+    let Some(forge_url) = &state.services.forge_url else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Forge not discovered — RSS spine unavailable",
+        )
+            .into_response();
+    };
+
+    let target = format!("{forge_url}/{path}");
+    let query = req.uri().query().map(|q| format!("?{q}")).unwrap_or_default();
+    let target_with_query = format!("{target}{query}");
+    tracing::info!("📡 RSS spine: /spine/rss/{path} → {target_with_query}");
+    proxy_request(&target_with_query, req).await
+}
+
 /// Forward a request to a target URL using hyper
 async fn proxy_request(target_url: &str, original: Request<Body>) -> Response {
     // Use tokio's TCP + hyper for the proxy connection
