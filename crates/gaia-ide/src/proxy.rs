@@ -63,6 +63,36 @@ pub async fn ollama_proxy(
     proxy_request(&target, req).await
 }
 
+/// OpenAI-compatible API proxy — THE INTERCEPTION LAYER
+///
+/// Any tool that speaks the OpenAI API (Cursor, Windsurf, Continue.dev, aider, etc.)
+/// can point at `http://localhost:3141/v1/` and it routes to Ollama's OpenAI endpoint.
+///
+/// This means: Cursor → localhost:3141/v1/chat/completions → Ollama → your local models.
+/// Claude's API calls get intercepted and served by YOUR models. Zero fees. Zero cloud.
+///
+/// Gaia captures every prompt and response for learning.
+pub async fn openai_compat_proxy(
+    State(state): State<Arc<AppState>>,
+    Path(path): Path<String>,
+    req: Request<Body>,
+) -> impl IntoResponse {
+    let Some(ollama_url) = &state.services.ollama_url else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Ollama not discovered — cannot serve OpenAI-compatible requests",
+        )
+            .into_response();
+    };
+
+    // Ollama serves OpenAI-compatible at /v1/*
+    let target = format!("{ollama_url}/v1/{path}");
+    let query = req.uri().query().map(|q| format!("?{q}")).unwrap_or_default();
+    let target_with_query = format!("{target}{query}");
+    tracing::info!("🧠 OpenAI intercept: /v1/{path} → {target_with_query}");
+    proxy_request(&target_with_query, req).await
+}
+
 /// Forward a request to a target URL using hyper
 async fn proxy_request(target_url: &str, original: Request<Body>) -> Response {
     // Use tokio's TCP + hyper for the proxy connection

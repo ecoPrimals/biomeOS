@@ -116,6 +116,9 @@ async fn async_main() {
 
     // Build router
     let app = Router::new()
+        // OpenAI-compatible API — Cursor/Windsurf/any tool can use localhost:3141
+        // as a drop-in replacement for api.openai.com or api.anthropic.com
+        .route("/v1/{*path}", get(proxy::openai_compat_proxy).post(proxy::openai_compat_proxy))
         // API routes (proxied)
         .route("/api/status", get(status_handler))
         .route("/api/forge/{*path}", get(proxy::forge_proxy).post(proxy::forge_proxy))
